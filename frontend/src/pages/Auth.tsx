@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useRouter, Link } from "../utils/router.tsx"
-import { useAuth, type Role } from '../utils/auth.tsx'
+import { useAuth } from '../utils/auth.tsx'
 import { apiFetch } from '../utils/api'
 
 type AuthMode = 'login' | 'register'
@@ -46,8 +46,8 @@ export default function Auth() {
       setLoading(false)
       return
     }
-    if (loginPassword.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (loginPassword.length < 8) {
+      setError('Password must be at least 8 characters.')
       setLoading(false)
       return
     }
@@ -79,19 +79,21 @@ export default function Auth() {
 
         if (response.data.user.role === 'admin') {
           setMessage('Admin login successful. Redirecting…')
-          setTimeout(() => router.navigate('/admin'), 450)
+          router.navigate('/admin')
         } else {
           setMessage('Logged in successfully. Redirecting…')
           setTimeout(() => router.navigate('/dashboard'), 450)
         }
       }
     } catch (err: any) {
-      if (err.status === 401) {
+      if (err.status === 400 && err.data?.errors?.length) {
+        setError(err.data.errors[0]?.msg || err.data.message || 'Validation failed.')
+      } else if (err.status === 401) {
         setError('Invalid email or password. Please check your credentials.')
       } else if (err.message?.includes('fetch') || err.message?.includes('network')) {
         setError('Backend server is not running. Please start the backend server first.')
       } else {
-        setError(err.message || 'Login failed. Please try again.')
+        setError(err.data?.message || err.message || 'Login failed. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -114,8 +116,8 @@ export default function Auth() {
       setLoading(false)
       return
     }
-    if (regPassword.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (regPassword.length < 8) {
+      setError('Password must be at least 8 characters.')
       setLoading(false)
       return
     }
@@ -152,7 +154,11 @@ export default function Auth() {
         setTimeout(() => router.navigate('/dashboard'), 450)
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.')
+      if (err.status === 400 && err.data?.errors?.length) {
+        setError(err.data.errors[0]?.msg || err.data.message || 'Validation failed.')
+      } else {
+        setError(err.data?.message || err.message || 'Registration failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
