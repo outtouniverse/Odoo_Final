@@ -5,8 +5,8 @@ import TripCard, { type Trip } from '../components/TripCard.tsx'
 import StatsCard from '../components/StatsCard.tsx'
 import DestinationCard from '../components/DestinationCard.tsx'
 import type { Destination } from '../components/DestinationCard.tsx'
-import { Link } from '../utils/router.tsx'
-import { apiFetch } from '../utils/api'
+import { Link, useRouter } from '../utils/router.tsx'
+import { apiFetch, getToken } from '../utils/api'
 const dummyTrips: Trip[] = [
   { id: 't1', name: 'Tokyo • Kyoto • Osaka', dateRange: 'Apr 12 — Apr 24, 2025', destinations: 3, coverUrl: 'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?q=80&w=1200&auto=format&fit=crop' },
   { id: 't2', name: 'Lisbon & Porto', dateRange: 'May 5 — May 12, 2025', destinations: 2, coverUrl: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=1200&auto=format&fit=crop' },
@@ -26,9 +26,18 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userName, setUserName] = useState('')
   const [avatar, setAvatar] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     let mounted = true
+
+    // Guard: must have token
+    const token = getToken()
+    if (!token) {
+      router.navigate('/login', { replace: true })
+      return
+    }
+
     apiFetch('/auth/me')
       .then((res) => {
         if (!mounted) return
@@ -38,13 +47,16 @@ export default function Dashboard() {
         if (av) setAvatar(av)
       })
       .catch(() => {
+        // Fallback to /profile; if that fails too, redirect to login
         apiFetch('/profile').then((res) => {
           if (!mounted) return
           const name = res?.data?.name ?? res?.name
           const av = res?.data?.avatar ?? res?.avatar
           if (name) setUserName(name)
           if (av) setAvatar(av)
-        }).catch(() => { setUserName('Traveler'); setAvatar('') })
+        }).catch(() => {
+          router.navigate('/login', { replace: true })
+        })
       })
     return () => { mounted = false }
   }, [])

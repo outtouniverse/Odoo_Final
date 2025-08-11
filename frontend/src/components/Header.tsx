@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from '../utils/router'
+import { Link, useRouter } from '../utils/router'
 import { apiFetch } from '../utils/api'
 
 type HeaderProps = {
@@ -10,10 +10,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
     const [open, setOpen] = useState(false)
     const [userName, setUserName] = useState<string>('')
     const [avatar, setAvatar] = useState<string>('')
+    const router = useRouter()
 
     useEffect(() => {
         let mounted = true
-        // Prefer /auth/me, fallback to /profile
+        const token = localStorage.getItem('accessToken')
+        if (!token) return // avoid unauthorized calls from public pages
+
+        // Prefer /auth/me, fallback to /profile on non-auth errors
         apiFetch('/auth/me')
             .then((res) => {
                 if (!mounted) return
@@ -22,7 +26,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 if (name) setUserName(name)
                 if (av) setAvatar(av)
             })
-            .catch(() => {
+            .catch((err: any) => {
+                if (err?.status === 401) {
+                    localStorage.removeItem('accessToken')
+                    router.navigate('/login', { replace: true })
+                    return
+                }
                 apiFetch('/profile')
                     .then((res) => {
                         if (!mounted) return

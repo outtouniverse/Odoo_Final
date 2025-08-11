@@ -12,7 +12,17 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: "include" });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "API error");
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch (_) {
+    // ignore JSON parse errors
+  }
+  if (!res.ok) {
+    const err: any = new Error((data && data.message) || `API error (${res.status})`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
