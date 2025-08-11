@@ -106,15 +106,15 @@ export default function App() {
       <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <a href="#" className="text-base font-semibold tracking-tight text-neutral-900">GlobeTrotter</a>
+            <a href="/" className="text-base font-semibold tracking-tight text-neutral-900">GlobeTrotter</a>
             <nav className="hidden items-center gap-8 text-sm text-neutral-700 md:flex">
               <a href="#features" className="hover:text-neutral-900">Features</a>
               <a href="#how" className="hover:text-neutral-900">How It Works</a>
               <a href="#demo" className="hover:text-neutral-900">Demo</a>
-              <a href="#login" className="hover:text-neutral-900">Login</a>
+              <a href="/login" className="hover:text-neutral-900">Login</a>
             </nav>
             <div className="flex items-center gap-3">
-              <a href="#get-started" className="inline-flex items-center rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Plan Your Trip</a>
+              <a href="/login" className="inline-flex items-center rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Plan Your Trip</a>
               <button aria-label="Open Menu" className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-neutral-300 text-neutral-700 transition hover:bg-neutral-50">
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"><path strokeWidth="1.5" strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
               </button>

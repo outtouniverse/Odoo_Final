@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { Link, useRouter } from './router'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
@@ -18,6 +19,7 @@ export default function Auth() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const router = useRouter()
   const title = useMemo(() => {
     if (mode === 'login') return 'Welcome back'
     if (mode === 'register') return 'Create your account'
@@ -40,7 +42,8 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Logged in. This is a demo UI — wire up your auth API here.')
+    setMessage('Logged in. Redirecting…')
+    setTimeout(() => router.navigate('/dashboard'), 450)
   }
 
   function onSubmitRegister(e: React.FormEvent) {
@@ -59,8 +62,8 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Account created. You can now sign in.')
-    setMode('login')
+    setMessage('Account created. Redirecting…')
+    setTimeout(() => router.navigate('/dashboard'), 450)
   }
 
   function onSubmitForgot(e: React.FormEvent) {
@@ -80,13 +83,13 @@ export default function Auth() {
       <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <a href="#" className="text-base font-semibold tracking-tight text-neutral-900">GlobeTrotter</a>
+            <Link to="/" className="text-base font-semibold tracking-tight text-neutral-900">GlobeTrotter</Link>
             <nav className="hidden items-center gap-8 text-sm text-neutral-700 md:flex" aria-label="Primary">
               <a href="#features" className="hover:text-neutral-900">Features</a>
               <a href="#how" className="hover:text-neutral-900">How It Works</a>
               <a href="#demo" className="hover:text-neutral-900">Demo</a>
             </nav>
-            <a href="/" className="inline-flex items-center rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-50">Back to Home</a>
+            <Link to="/" className="inline-flex items-center rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-50">Back to Home</Link>
           </div>
         </div>
       </header>
