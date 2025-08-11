@@ -27,7 +27,7 @@ export default function Auth() {
     return /.+@.+\..+/.test(email)
   }
 
-  function onSubmitLogin(e: React.FormEvent) {
+  async function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -39,19 +39,44 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    apiFetch('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-    })
-      .then((data) => {
-        localStorage.setItem('accessToken', data.data.token)
-        setMessage('Logged in. Redirecting…')
-        setTimeout(() => router.navigate('/dashboard'), 450)
+
+    // 1) Try normal login
+    try {
+      const data = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       })
-      .catch((err) => setError(err.message))
+      localStorage.setItem('accessToken', data.data.accessToken)
+      setMessage('Logged in. Redirecting…')
+      setTimeout(() => router.navigate('/dashboard'), 450)
+      return
+    } catch (err: any) {
+      // continue to possible auto-register
+    }
+
+    // 2) If login failed, attempt signup ONLY if the email is not registered.
+    // We attempt signup; if backend says user exists, we show wrong password message.
+    try {
+      const inferredName = loginEmail.split('@')[0] || 'New User'
+      const s = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name: inferredName, email: loginEmail, password: loginPassword }),
+      })
+      localStorage.setItem('accessToken', s.data.accessToken)
+      setMessage('Account created. Redirecting…')
+      setTimeout(() => router.navigate('/dashboard'), 450)
+    } catch (err: any) {
+      // If signup failed because user exists, surface password error
+      const msg = err?.message || ''
+      if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('exists')) {
+        setError('Incorrect password. This email is already registered.')
+      } else {
+        setError(msg || 'Login failed')
+      }
+    }
   }
 
-  function onSubmitRegister(e: React.FormEvent) {
+  async function onSubmitRegister(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -67,16 +92,17 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    apiFetch('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify({ name: regName, email: regEmail, password: regPassword }),
-    })
-      .then((data) => {
-        localStorage.setItem('accessToken', data.data.token)
-        setMessage('Account created. Redirecting…')
-        setTimeout(() => router.navigate('/dashboard'), 450)
+    try {
+      const data = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword }),
       })
-      .catch((err) => setError(err.message))
+      localStorage.setItem('accessToken', data.data.accessToken)
+      setMessage('Account created. Redirecting…')
+      setTimeout(() => router.navigate('/dashboard'), 450)
+    } catch (err: any) {
+      setError(err.message)
+    }
   }
 
   function onSubmitForgot(e: React.FormEvent) {

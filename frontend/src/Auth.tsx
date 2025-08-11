@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Link, useRouter } from './router'
+import { apiFetch } from './api'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
@@ -30,7 +31,7 @@ export default function Auth() {
     return /.+@.+\..+/.test(email)
   }
 
-  function onSubmitLogin(e: React.FormEvent) {
+  async function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -42,11 +43,42 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Logged in. Redirecting…')
-    setTimeout(() => router.navigate('/dashboard'), 450)
+
+    // Try login first
+    try {
+      const data = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      })
+      localStorage.setItem('accessToken', data.data.accessToken)
+      setMessage('Logged in. Redirecting…')
+      setTimeout(() => router.navigate('/dashboard'), 450)
+      return
+    } catch (_) {
+      // fallthrough to possible auto-signup
+    }
+
+    // Optional auto-register if account doesn't exist
+    try {
+      const inferredName = loginEmail.split('@')[0] || 'User'
+      const s = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name: inferredName, email: loginEmail, password: loginPassword })
+      })
+      localStorage.setItem('accessToken', s.data.accessToken)
+      setMessage('Account created. Redirecting…')
+      setTimeout(() => router.navigate('/dashboard'), 450)
+    } catch (err: any) {
+      const msg = err?.message || 'Login failed'
+      if (msg.toLowerCase().includes('exists')) {
+        setError('Incorrect password. This email is already registered.')
+      } else {
+        setError(msg)
+      }
+    }
   }
 
-  function onSubmitRegister(e: React.FormEvent) {
+  async function onSubmitRegister(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -62,8 +94,17 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Account created. Redirecting…')
-    setTimeout(() => router.navigate('/dashboard'), 450)
+    try {
+      const data = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword })
+      })
+      localStorage.setItem('accessToken', data.data.accessToken)
+      setMessage('Account created. Redirecting…')
+      setTimeout(() => router.navigate('/dashboard'), 450)
+    } catch (err: any) {
+      setError(err.message)
+    }
   }
 
   function onSubmitForgot(e: React.FormEvent) {
