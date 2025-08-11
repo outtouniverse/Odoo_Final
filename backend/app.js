@@ -17,6 +17,9 @@ require('./config/passport');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
+const tripsRouter = require('./routes/trips');
+const profileRouter = require('./routes/profile');
+const dashboardRouter = require('./routes/dashboard');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -75,6 +78,9 @@ app.set('view engine', 'ejs');
 app.use('/', indexRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/trips', tripsRouter);
+app.use('/api/profile', profileRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

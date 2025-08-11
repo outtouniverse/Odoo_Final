@@ -31,6 +31,84 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  language: {
+    type: String,
+    default: 'en',
+    enum: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko']
+  },
+  timezone: {
+    type: String,
+    default: 'UTC'
+  },
+  currency: {
+    type: String,
+    default: 'USD',
+    enum: ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'CHF']
+  },
+  theme: {
+    type: String,
+    default: 'light',
+    enum: ['light', 'dark', 'auto']
+  },
+  notifications: {
+    email: {
+      type: Boolean,
+      default: true
+    },
+    push: {
+      type: Boolean,
+      default: true
+    },
+    marketing: {
+      type: Boolean,
+      default: false
+    }
+  },
+  privacySettings: {
+    profileVisibility: {
+      type: String,
+      default: 'public',
+      enum: ['public', 'friends', 'private']
+    },
+    showEmail: {
+      type: Boolean,
+      default: false
+    },
+    showLocation: {
+      type: Boolean,
+      default: true
+    }
+  },
+  savedDestinations: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    city: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    country: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    coordinates: {
+      latitude: Number,
+      longitude: Number
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Notes cannot be more than 500 characters']
+    },
+    savedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   role: {
     type: String,
     enum: ['user', 'admin'],
