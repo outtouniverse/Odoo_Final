@@ -18,13 +18,14 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showForgotInline, setShowForgotInline] = useState(false)
 
   const router = useRouter()
   const title = useMemo(() => {
-    if (mode === 'login') return 'Welcome back'
+    if (mode === 'login') return showForgotInline ? 'Reset your password' : 'Welcome back'
     if (mode === 'register') return 'Create your account'
     return 'Reset your password'
-  }, [mode])
+  }, [mode, showForgotInline])
 
   function validateEmail(email: string) {
     return /.+@.+\..+/.test(email)
@@ -98,10 +99,10 @@ export default function Auth() {
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mt-10 max-w-md">
           <div className="mb-6 rounded-full border border-neutral-200 bg-white p-1 shadow-sm">
-            <div className="grid grid-cols-3 text-sm font-medium text-neutral-700">
+            <div className="grid grid-cols-2 text-sm font-medium text-neutral-700">
               <button
                 type="button"
-                onClick={() => setMode('login')}
+                onClick={() => { setMode('login'); setShowForgotInline(false); }}
                 className={`rounded-full px-3 py-2 transition ${mode === 'login' ? 'bg-teal-600 text-white shadow-sm' : 'hover:bg-neutral-50'}`}
                 aria-pressed={mode === 'login'}
               >
@@ -109,19 +110,11 @@ export default function Auth() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode('register')}
+                onClick={() => { setMode('register'); setShowForgotInline(false); }}
                 className={`rounded-full px-3 py-2 transition ${mode === 'register' ? 'bg-teal-600 text-white shadow-sm' : 'hover:bg-neutral-50'}`}
                 aria-pressed={mode === 'register'}
               >
                 Register
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('forgot')}
-                className={`rounded-full px-3 py-2 transition ${mode === 'forgot' ? 'bg-teal-600 text-white shadow-sm' : 'hover:bg-neutral-50'}`}
-                aria-pressed={mode === 'forgot'}
-              >
-                Forgot
               </button>
             </div>
           </div>
@@ -129,9 +122,9 @@ export default function Auth() {
           <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <h1 className="text-xl font-semibold tracking-tight text-neutral-900">{title}</h1>
             <p className="mt-1 text-sm text-neutral-600">
-              {mode === 'login' && 'Sign in to access your itineraries and keep planning.'}
+              {mode === 'login' && !showForgotInline && 'Sign in to access your itineraries and keep planning.'}
               {mode === 'register' && 'Set up your GlobeTrotter account to start building trips.'}
-              {mode === 'forgot' && 'We’ll email you a link to reset your password.'}
+              {mode === 'login' && showForgotInline && 'We’ll email you a link to reset your password.'}
             </p>
 
             {message && (
@@ -145,7 +138,7 @@ export default function Auth() {
               </div>
             )}
 
-            {mode === 'login' && (
+            {mode === 'login' && !showForgotInline && (
               <form onSubmit={onSubmitLogin} className="mt-6 space-y-4">
                 <div>
                   <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-neutral-800">Email</label>
@@ -186,7 +179,7 @@ export default function Auth() {
                     <input id="remember" type="checkbox" className="h-4 w-4 rounded border-neutral-300 text-teal-600 focus:ring-teal-500" />
                     <label htmlFor="remember" className="text-xs text-neutral-700">Remember me</label>
                   </div>
-                  <button type="button" onClick={() => setMode('forgot')} className="text-xs text-neutral-700 hover:text-neutral-900">Forgot password?</button>
+                  <button type="button" onClick={() => setShowForgotInline(true)} className="text-xs text-neutral-700 hover:text-neutral-900">Forgot password?</button>
                 </div>
                 <div className="pt-2">
                   <button type="submit" className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Sign In</button>
@@ -246,7 +239,7 @@ export default function Auth() {
               </form>
             )}
 
-            {mode === 'forgot' && (
+            {mode === 'login' && showForgotInline && (
               <form onSubmit={onSubmitForgot} className="mt-6 space-y-4">
                 <div>
                   <label htmlFor="forgot-email" className="mb-1 block text-sm font-medium text-neutral-800">Email</label>
@@ -265,7 +258,7 @@ export default function Auth() {
                 </div>
                 <p className="text-center text-xs text-neutral-600">
                   Remembered your password?{' '}
-                  <button type="button" onClick={() => setMode('login')} className="font-medium text-neutral-800 underline-offset-2 hover:underline">Back to sign in</button>
+                  <button type="button" onClick={() => setShowForgotInline(false)} className="font-medium text-neutral-800 underline-offset-2 hover:underline">Back to sign in</button>
                 </p>
               </form>
             )}
@@ -308,5 +301,6 @@ export default function Auth() {
     </div>
   )
 }
+
 
 
