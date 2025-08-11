@@ -10,24 +10,34 @@ import NewTrip from './pages/NewTrip.tsx'
 import TripPlan from './pages/TripPlan.tsx'
 import ItineraryBento from './pages/ItineraryBento.tsx'
 import { TripProvider } from './utils/TripContext.tsx'
-import Trips from './pages/Trips.tsx'
-import Admin from './pages/Admin.tsx'
 import { AuthProvider } from './utils/auth.tsx'
+import Admin from './pages/Admin.tsx'
+import CitySearch from './pages/CitySearch.tsx'
+import ActivitySearch from './pages/ActivitySearch.tsx'
+import TripBudget from './pages/TripBudget.tsx'
+import TripCalendar from './pages/TripCalendar.tsx'
+import PublicItinerary from './pages/PublicItinerary.tsx'
+import MyTripCart from './components/MyTripCart.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <TripProvider>
         <RouterProvider>
+          <MyTripCart />
           <Routes>
             <Route path="/" element={<App />} />
             <Route path="/login" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfileSettings />} />
             <Route path="/new-trip" element={<NewTrip />} />
-            <Route path="/trips" element={<Trips />} />
             <Route path="/trip-plan" element={<TripPlan />} />
             <Route path="/itinerary" element={<ItineraryBento />} />
+            <Route path="/cities" element={<CitySearch />} />
+            <Route path="/activities" element={<ActivitySearch />} />
+            <Route path="/budget" element={<TripBudget />} />
+            <Route path="/calendar" element={<TripCalendar />} />
+            <Route path="/public-itinerary" element={<PublicItinerary />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </RouterProvider>
