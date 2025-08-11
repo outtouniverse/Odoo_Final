@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Link, useRouter } from './router'
-import { apiFetch } from './api'
+import { useRouter, Link, RouterProvider, Routes, Route } from "../utils/router.tsx"
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
@@ -31,7 +30,7 @@ export default function Auth() {
     return /.+@.+\..+/.test(email)
   }
 
-  async function onSubmitLogin(e: React.FormEvent) {
+  function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -43,22 +42,11 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-
-    try {
-      const data = await apiFetch('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: loginEmail, password: loginPassword })
-      })
-      localStorage.setItem('accessToken', data.data.accessToken)
-      setMessage('Logged in. Redirecting…')
-      setTimeout(() => router.navigate('/dashboard'), 450)
-    } catch (err: any) {
-      const msg = err?.message || 'Invalid email or password.'
-      setError(msg)
-    }
+    setMessage('Logged in. Redirecting…')
+    setTimeout(() => router.navigate('/dashboard'), 450)
   }
 
-  async function onSubmitRegister(e: React.FormEvent) {
+  function onSubmitRegister(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -74,17 +62,8 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    try {
-      const data = await apiFetch('/auth/signup', {
-        method: 'POST',
-        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword })
-      })
-      localStorage.setItem('accessToken', data.data.accessToken)
-      setMessage('Account created. Redirecting…')
-      setTimeout(() => router.navigate('/dashboard'), 450)
-    } catch (err: any) {
-      setError(err.message)
-    }
+    setMessage('Account created. Redirecting…')
+    setTimeout(() => router.navigate('/dashboard'), 450)
   }
 
   function onSubmitForgot(e: React.FormEvent) {
