@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react'
-import { useRouter, Link, RouterProvider, Routes, Route } from "../utils/router.tsx"
+import { useRouter, Link } from "../utils/router.tsx"
+import { useAuth, type Role } from '../utils/auth'
 
-type AuthMode = 'login' | 'register' | 'forgot'
+type AuthMode = 'login' | 'register'
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>('login')
@@ -18,9 +19,11 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [adminRole, setAdminRole] = useState<Role>('super_admin')
   const [showForgotInline, setShowForgotInline] = useState(false)
 
   const router = useRouter()
+  const { login } = useAuth()
   const title = useMemo(() => {
     if (mode === 'login') return showForgotInline ? 'Reset your password' : 'Welcome back'
     if (mode === 'register') return 'Create your account'
@@ -43,8 +46,17 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
+    // Demo: if email includes 'admin', sign in as selected admin role; else as normal user
+    const isAdmin = /admin/i.test(loginEmail)
+    const role: Role = isAdmin ? adminRole : 'support'
+    login({
+      name: loginEmail.split('@')[0] || 'User',
+      email: loginEmail,
+      role,
+      token: Math.random().toString(36).slice(2)
+    })
     setMessage('Logged in. Redirecting…')
-    setTimeout(() => router.navigate('/dashboard'), 450)
+    setTimeout(() => router.navigate(isAdmin ? '/admin' : '/dashboard'), 450)
   }
 
   function onSubmitRegister(e: React.FormEvent) {
@@ -63,6 +75,12 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
+    login({
+      name: regName,
+      email: regEmail,
+      role: 'support',
+      token: Math.random().toString(36).slice(2)
+    })
     setMessage('Account created. Redirecting…')
     setTimeout(() => router.navigate('/dashboard'), 450)
   }
@@ -174,6 +192,14 @@ export default function Auth() {
                     </button>
                   </div>
                 </div>
+                <div>
+                  <label htmlFor="admin-role" className="mb-1 block text-xs font-medium text-neutral-700">Admin role (type an email with 'admin' to use)</label>
+                  <select id="admin-role" value={adminRole} onChange={(e) => setAdminRole(e.target.value as Role)} className="w-full rounded-md border-neutral-300 px-3 py-2 text-xs text-neutral-700">
+                    <option value="super_admin">Super Admin</option>
+                    <option value="moderator">Travel Moderator</option>
+                    <option value="support">Support Staff</option>
+                  </select>
+                </div>
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-2">
                     <input id="remember" type="checkbox" className="h-4 w-4 rounded border-neutral-300 text-teal-600 focus:ring-teal-500" />
@@ -234,7 +260,7 @@ export default function Auth() {
                 </div>
                 <p className="text-center text-xs text-neutral-600">
                   Already have an account?{' '}
-                  <button type="button" onClick={() => setMode('login')} className="font-medium text-neutral-800 underline-offset-2 hover:underline">Sign in</button>
+                  <button type="button" onClick={() => { setMode('login'); setShowForgotInline(false); }} className="font-medium text-neutral-800 underline-offset-2 hover:underline">Sign in</button>
                 </p>
               </form>
             )}
@@ -301,6 +327,3 @@ export default function Auth() {
     </div>
   )
 }
-
-
-
