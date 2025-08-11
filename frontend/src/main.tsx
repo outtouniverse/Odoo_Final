@@ -3,13 +3,17 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import Auth from './Auth.tsx'
-// To preview the auth page instead of the landing page, switch render below:
-// import Auth from './Auth.tsx'
+import Dashboard from './Dashboard.tsx'
+import { RouterProvider, Routes, Route } from './router.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
-    {/** Swap to <Auth /> to preview login/register/forgot page */}
-    <Auth />
+    <RouterProvider>
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/login" element={<Auth />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </RouterProvider>
   </StrictMode>,
 )
