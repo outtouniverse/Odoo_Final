@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '../components/Header.tsx'
 import Sidebar from '../components/Sidebar.tsx'
 import TripCard, { type Trip } from '../components/TripCard.tsx'
@@ -6,6 +6,7 @@ import StatsCard from '../components/StatsCard.tsx'
 import DestinationCard from '../components/DestinationCard.tsx'
 import type { Destination } from '../components/DestinationCard.tsx'
 import { Link } from '../utils/router.tsx'
+import { apiFetch } from '../utils/api'
 const dummyTrips: Trip[] = [
   { id: 't1', name: 'Tokyo • Kyoto • Osaka', dateRange: 'Apr 12 — Apr 24, 2025', destinations: 3, coverUrl: 'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?q=80&w=1200&auto=format&fit=crop' },
   { id: 't2', name: 'Lisbon & Porto', dateRange: 'May 5 — May 12, 2025', destinations: 2, coverUrl: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=1200&auto=format&fit=crop' },
@@ -23,7 +24,30 @@ const dummyDestinations: Destination[] = [
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const userName = 'Alex'
+  const [userName, setUserName] = useState('')
+  const [avatar, setAvatar] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    apiFetch('/auth/me')
+      .then((res) => {
+        if (!mounted) return
+        const name = res?.data?.user?.name
+        const av = res?.data?.user?.avatar
+        if (name) setUserName(name)
+        if (av) setAvatar(av)
+      })
+      .catch(() => {
+        apiFetch('/profile').then((res) => {
+          if (!mounted) return
+          const name = res?.data?.name ?? res?.name
+          const av = res?.data?.avatar ?? res?.avatar
+          if (name) setUserName(name)
+          if (av) setAvatar(av)
+        }).catch(() => { setUserName('Traveler'); setAvatar('') })
+      })
+    return () => { mounted = false }
+  }, [])
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 antialiased">
@@ -34,9 +58,14 @@ export default function Dashboard() {
           {/* Welcome Banner */}
           <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-xl font-semibold tracking-tight text-neutral-900">Welcome back, {userName}!</h1>
-                <p className="mt-1 text-sm text-neutral-600">Your next adventure is waiting.</p>
+              <div className="flex items-center gap-3">
+                <span className="inline-block h-10 w-10 overflow-hidden rounded-full bg-neutral-200">
+                  {avatar ? <img src={avatar} alt="Avatar" className="h-full w-full object-cover" /> : null}
+                </span>
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight text-neutral-900">Welcome back, {userName || 'Traveler'}!</h1>
+                  <p className="mt-1 text-sm text-neutral-600">Your next adventure is waiting.</p>
+                </div>
               </div>
               <Link
                 to="/new-trip"

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { apiFetch } from './src/api'
-import { useRouter } from './src/router'
+import { apiFetch } from './src/utils/api'
+import { useRouter } from './src/utils/router'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 

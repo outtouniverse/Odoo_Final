@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from '../utils/router'
+import { apiFetch } from '../utils/api'
 
 type HeaderProps = {
     onMenuClick?: () => void
@@ -7,6 +8,48 @@ type HeaderProps = {
 
 export default function Header({ onMenuClick }: HeaderProps) {
     const [open, setOpen] = useState(false)
+    const [userName, setUserName] = useState<string>('')
+    const [avatar, setAvatar] = useState<string>('')
+
+    useEffect(() => {
+        let mounted = true
+        // Prefer /auth/me, fallback to /profile
+        apiFetch('/auth/me')
+            .then((res) => {
+                if (!mounted) return
+                const name = res?.data?.user?.name
+                const av = res?.data?.user?.avatar
+                if (name) setUserName(name)
+                if (av) setAvatar(av)
+            })
+            .catch(() => {
+                apiFetch('/profile')
+                    .then((res) => {
+                        if (!mounted) return
+                        const name = res?.data?.name ?? res?.name
+                        const av = res?.data?.avatar ?? res?.avatar
+                        if (name) setUserName(name)
+                        if (av) setAvatar(av)
+                    })
+                    .catch(() => {
+                        setUserName('Traveler')
+                        setAvatar('')
+                    })
+            })
+        return () => { mounted = false }
+    }, [])
+
+    async function handleLogout() {
+        try {
+            await apiFetch('/auth/logout', { method: 'POST', body: JSON.stringify({}) })
+        } catch (_) {
+            // ignore network error on logout
+        } finally {
+            localStorage.removeItem('accessToken')
+            setOpen(false)
+            window.location.href = '/login'
+        }
+    }
 
     return (
         <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -32,7 +75,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
                                 className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-200 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-teal-500"
                             />
                             <span className="pointer-events-none absolute inset-y-0 right-3 my-auto inline-flex h-5 items-center text-neutral-400">
-                                <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7" strokeWidth="1.5" /><path strokeWidth="1.5" strokeLinecap="round" d="M21 21l-3.8-3.8" /></svg>
+                                <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor">
+                                    <circle cx="11" cy="11" r="7" strokeWidth="1.5" />
+                                    <path strokeWidth="1.5" strokeLinecap="round" d="M21 21l-3.8-3.8" />
+                                </svg>
                             </span>
                         </div>
                     </div>
@@ -46,15 +92,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
                                 aria-haspopup="menu"
                                 aria-expanded={open}
                             >
-                                <span className="inline-block h-8 w-8 overflow-hidden rounded-full bg-neutral-200"></span>
-                                <span className="hidden sm:inline">Alex</span>
+                                <span className="inline-block h-8 w-8 overflow-hidden rounded-full bg-neutral-200">
+                                    {avatar ? <img src={avatar} alt="Avatar" className="h-full w-full object-cover" /> : null}
+                                </span>
+                                <span className="hidden sm:inline">{userName || 'Traveler'}</span>
                                 <svg viewBox="0 0 24 24" className="h-4 w-4 text-neutral-500" fill="none" stroke="currentColor"><path strokeWidth="1.5" strokeLinecap="round" d="M6 9l6 6 6-6" /></svg>
                             </button>
                             {open && (
                                 <div role="menu" className="absolute right-0 mt-2 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md">
                                     <Link to="/profile" className="block px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Profile</Link>
                                     <Link to="/profile" className="block px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Settings</Link>
-                                    <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Logout</button>
+                                    <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={handleLogout}>Logout</button>
                                 </div>
                             )}
                         </div>
