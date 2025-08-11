@@ -165,7 +165,6 @@ router.delete('/users/:id',
   protect, 
   restrictTo('admin'), 
   param('id').isMongoId(), 
-  body('confirm').equals('DELETE'), 
   handleValidation, 
   async (req, res) => {
     try {
