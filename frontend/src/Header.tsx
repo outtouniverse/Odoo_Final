@@ -38,6 +38,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
         return () => { mounted = false }
     }, [])
 
+    async function handleLogout() {
+        try {
+            await apiFetch('/auth/logout', { method: 'POST', body: JSON.stringify({}) })
+        } catch (_) {
+            // ignore network errors during logout
+        } finally {
+            localStorage.removeItem('accessToken')
+            setOpen(false)
+            window.location.href = '/login'
+        }
+    }
+
     return (
         <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -95,7 +107,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                                 <div role="menu" className="absolute right-0 mt-2 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md">
                                     <Link to="/profile" className="block px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Profile</Link>
                                     <Link to="/profile" className="block px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Settings</Link>
-                                    <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Logout</button>
+                                    <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={handleLogout}>Logout</button>
                                 </div>
                             )}
                         </div>

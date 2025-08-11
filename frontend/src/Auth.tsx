@@ -44,7 +44,6 @@ export default function Auth() {
       return
     }
 
-    // Try login first
     try {
       const data = await apiFetch('/auth/login', {
         method: 'POST',
@@ -53,28 +52,9 @@ export default function Auth() {
       localStorage.setItem('accessToken', data.data.accessToken)
       setMessage('Logged in. Redirecting…')
       setTimeout(() => router.navigate('/dashboard'), 450)
-      return
-    } catch (_) {
-      // fallthrough to possible auto-signup
-    }
-
-    // Optional auto-register if account doesn't exist
-    try {
-      const inferredName = loginEmail.split('@')[0] || 'User'
-      const s = await apiFetch('/auth/signup', {
-        method: 'POST',
-        body: JSON.stringify({ name: inferredName, email: loginEmail, password: loginPassword })
-      })
-      localStorage.setItem('accessToken', s.data.accessToken)
-      setMessage('Account created. Redirecting…')
-      setTimeout(() => router.navigate('/dashboard'), 450)
     } catch (err: any) {
-      const msg = err?.message || 'Login failed'
-      if (msg.toLowerCase().includes('exists')) {
-        setError('Incorrect password. This email is already registered.')
-      } else {
-        setError(msg)
-      }
+      const msg = err?.message || 'Invalid email or password.'
+      setError(msg)
     }
   }
 
