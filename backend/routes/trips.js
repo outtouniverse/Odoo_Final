@@ -565,4 +565,250 @@ router.get('/search', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/trips/:id/cities
+// @desc    Add a city to a trip
+// @access  Private
+router.post('/:id/cities', protect, async (req, res) => {
+  try {
+    const { id, name, country, img } = req.body;
+    
+    if (!id || !name || !country) {
+      return res.status(400).json({
+        success: false,
+        message: 'City id, name, and country are required'
+      });
+    }
+
+    const trip = await Trip.findById(req.params.id);
+    
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trip not found'
+      });
+    }
+    
+    // Check if user owns this trip
+    if (!trip.canEdit(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only add cities to your own trips.'
+      });
+    }
+
+    // Check if city is already added
+    const cityExists = trip.selectedCities.some(city => city.id === id);
+    if (cityExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'City is already added to this trip'
+      });
+    }
+
+    // Add city to trip
+    trip.selectedCities.push({
+      id: id.trim(),
+      name: name.trim(),
+      country: country.trim(),
+      img: img || '',
+      addedAt: new Date()
+    });
+
+    const updatedTrip = await trip.save();
+    await updatedTrip.populate('user', 'name avatar');
+    
+    res.json({
+      success: true,
+      message: 'City added to trip successfully',
+      data: updatedTrip
+    });
+
+  } catch (error) {
+    console.error('Error adding city to trip:', error);
+    
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid trip ID'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Server error while adding city to trip'
+    });
+  }
+});
+
+// @route   DELETE /api/trips/:id/cities/:cityId
+// @desc    Remove a city from a trip
+// @access  Private
+router.delete('/:id/cities/:cityId', protect, async (req, res) => {
+  try {
+    const trip = await Trip.findById(req.params.id);
+    
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trip not found'
+      });
+    }
+    
+    // Check if user owns this trip
+    if (!trip.canEdit(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only remove cities from your own trips.'
+      });
+    }
+
+    // Remove city from trip
+    trip.selectedCities = trip.selectedCities.filter(city => city.id !== req.params.cityId);
+    
+    const updatedTrip = await trip.save();
+    await updatedTrip.populate('user', 'name avatar');
+    
+    res.json({
+      success: true,
+      message: 'City removed from trip successfully',
+      data: updatedTrip
+    });
+
+  } catch (error) {
+    console.error('Error removing city from trip:', error);
+    
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid trip ID'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Server error while removing city from trip'
+    });
+  }
+});
+
+// @route   GET /api/trips/:id/cities
+// @desc    Get all cities in a trip
+// @access  Private
+router.get('/:id/cities', protect, async (req, res) => {
+  try {
+    const trip = await Trip.findById(req.params.id).populate('user', 'name avatar');
+    
+    if (!trip) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trip not found'
+      });
+    }
+    
+    // Check if user can access this trip
+    if (!trip.isPublic && (!req.user || trip.user._id.toString() !== req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This trip is private.'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: trip.selectedCities
+    });
+
+  } catch (error) {
+    console.error('Error fetching trip cities:', error);
+    
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid trip ID'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching trip cities'
+    });
+  }
+});
+
+// @route   POST /api/trips/quick-add
+// @desc    Create a quick trip with selected cities
+// @access  Private
+router.post('/quick-add', protect, async (req, res) => {
+  try {
+    const { cities } = req.body;
+    
+    if (!cities || !Array.isArray(cities) || cities.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one city is required'
+      });
+    }
+
+    // Validate cities data
+    for (const city of cities) {
+      if (!city.id || !city.name || !city.country) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each city must have id, name, and country'
+        });
+      }
+    }
+
+    // Create trip with selected cities
+    const trip = new Trip({
+      name: `Trip to ${cities.map(c => c.name).join(', ')}`,
+      description: `Exploring ${cities.length} amazing destination${cities.length > 1 ? 's' : ''}: ${cities.map(c => `${c.name}, ${c.country}`).join(' • ')}`,
+      startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+      coverPhoto: cities[0]?.img || '',
+      isPublic: false,
+      tags: cities.map(c => `${c.name}, ${c.country}`),
+      budget: { amount: 1000, currency: 'USD' },
+      location: { 
+        city: cities[0]?.name || '', 
+        country: cities[0]?.country || '' 
+      },
+      selectedCities: cities.map(city => ({
+        id: city.id,
+        name: city.name,
+        country: city.country,
+        img: city.img || '',
+        addedAt: new Date()
+      })),
+      user: req.user.id
+    });
+
+    const savedTrip = await trip.save();
+    await savedTrip.populate('user', 'name avatar');
+
+    res.status(201).json({
+      success: true,
+      message: 'Quick trip created successfully',
+      data: savedTrip
+    });
+
+  } catch (error) {
+    console.error('Error creating quick trip:', error);
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error while creating quick trip'
+    });
+  }
+});
+
 module.exports = router;

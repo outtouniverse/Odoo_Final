@@ -83,7 +83,33 @@ const tripSchema = new mongoose.Schema({
       latitude: Number,
       longitude: Number
     }
-  }
+  },
+  // New field to store selected cities
+  selectedCities: [{
+    id: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    country: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    img: {
+      type: String,
+      default: ''
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

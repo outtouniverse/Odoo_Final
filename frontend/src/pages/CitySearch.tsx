@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, X, SlidersHorizontal, Plus, Check, MapPin, Globe2 } from 'lucide-react'
+import { Search, X, SlidersHorizontal, Plus, Check, MapPin, Globe2, Save, Calendar, DollarSign } from 'lucide-react'
 import { useRouter } from '../utils/router'
 import { useTrip } from '../utils/TripContext'
+import { useAuth } from '../utils/auth'
+import { useToast } from '../components/Toast'
 
 type City = {
   id: string
@@ -119,7 +121,9 @@ function getFlagEmoji(countryCode: string) {
 
 export default function CitySearch() {
   const { navigate } = useRouter()
-  const { addCity, removeCity } = useTrip()
+  const { addCity, removeCity, selectedCities, saveTripToDatabase, saveCityToDatabase, createQuickTrip } = useTrip()
+  const { isAuthenticated } = useAuth()
+  const { success: showSuccess, error: showError } = useToast()
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [continent, setContinent] = useState('All')
@@ -132,8 +136,27 @@ export default function CitySearch() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [countries, setCountries] = useState<string[]>(['All'])
+  
+  // Trip save modal state
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [tripData, setTripData] = useState({
+    name: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    budget: { amount: 1000, currency: 'USD' }
+  })
 
   const pageSize = 12
+
+  // Clear error message after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error])
 
   // Debounce search query
   useEffect(() => {
@@ -330,22 +353,139 @@ export default function CitySearch() {
   useEffect(() => { setPage(1) }, [debounced, continent, country, costRange])
   const pageItems = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page])
 
-  function toggleAdd(id: string) {
+  async function toggleAdd(id: string) {
+    // Ensure user is authenticated
+    if (!isAuthenticated) {
+      showError('Please log in to add cities to your trip')
+      setTimeout(() => navigate('/login'), 2000)
+      return
+    }
+
     setAddedIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) {
+        // Remove from trip
         next.delete(id)
         removeCity(id)
+        showSuccess('City removed from trip! 🗑️')
       } else {
+        // Add to trip
         next.add(id)
         const c = [...cities, ...extraCities].find(x => x.id === id)
         if (c) {
-          addCity({ id: c.id, name: c.name, country: c.country, img: c.img })
+          try {
+            // Save to database immediately
+            saveCityToDatabase({ 
+              id: c.id, 
+              name: c.name, 
+              country: c.country, 
+              img: c.img 
+            }).then(() => {
+              showSuccess(`Added ${c.name}, ${c.country} to your trip! ✈️`)
+            }).catch((err) => {
+              console.error('Error saving city to database:', err)
+              showError('Failed to save city to database. Please try again.')
+              // Remove from addedIds if save failed
+              next.delete(id)
+            })
+          } catch (err) {
+            console.error('Error adding city to trip:', err)
+            showError('Failed to add city to trip. Please try again.')
+            // Remove from addedIds if addCity failed
+            next.delete(id)
+          }
+        } else {
+          console.error('City not found:', id)
+          showError('City not found. Please try again.')
+          next.delete(id)
         }
       }
       return next
     })
   }
+
+  // Handle save trip
+  async function handleSaveTrip() {
+    if (!isAuthenticated) {
+      showError('Please log in to save trips')
+      setTimeout(() => navigate('/login'), 2000)
+      return
+    }
+
+    if (!tripData.name.trim() || !tripData.description.trim() || !tripData.startDate || !tripData.endDate) {
+      showError('Please fill in all required fields')
+      return
+    }
+
+    if (selectedCities.length === 0) {
+      showError('Please select at least one city')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await saveTripToDatabase(tripData)
+      setShowSaveModal(false)
+      setTripData({
+        name: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        budget: { amount: 1000, currency: 'USD' }
+      })
+      setAddedIds(new Set())
+      showSuccess('Trip saved successfully! 🎉')
+      // Navigate to trips page to show the new trip
+      setTimeout(() => navigate('/trips'), 1500)
+    } catch (err: any) {
+      showError(err?.message || 'Failed to save trip')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Handle quick trip creation
+  async function handleQuickTrip() {
+    if (!isAuthenticated) {
+      showError('Please log in to create trips')
+      setTimeout(() => navigate('/login'), 2000)
+      return
+    }
+
+    if (selectedCities.length === 0) {
+      showError('Please select at least one city')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await createQuickTrip(selectedCities)
+      setAddedIds(new Set())
+      showSuccess(`Quick trip created with ${selectedCities.length} cities! 🚀`)
+      // Navigate to trips page to show the new trip
+      setTimeout(() => navigate('/trips'), 1500)
+    } catch (err: any) {
+      showError(err?.message || 'Failed to create quick trip')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Auto-generate trip name when cities are selected
+  useEffect(() => {
+    if (selectedCities.length > 0 && !tripData.name) {
+      const cityNames = selectedCities.map(c => c.name).join(', ')
+      setTripData(prev => ({
+        ...prev,
+        name: `Trip to ${cityNames}`,
+        description: `Exploring ${selectedCities.length} amazing destination${selectedCities.length > 1 ? 's' : ''}: ${cityNames}`
+      }))
+    }
+  }, [selectedCities, tripData.name])
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
@@ -390,6 +530,32 @@ export default function CitySearch() {
                   <span className="ml-1">{costRange[0]}–{costRange[1]}</span>
                 </div>
               </div>
+              {selectedCities.length > 0 && (
+                <>
+                  <button
+                    onClick={handleQuickTrip}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Creating...' : `Quick Trip (${selectedCities.length})`}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        showError('Please log in to save trips')
+                        setTimeout(() => navigate('/login'), 2000)
+                        return
+                      }
+                      setShowSaveModal(true)
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-teal-700"
+                  >
+                    <Save className="h-4 w-4" />
+                    Custom Trip
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -402,6 +568,7 @@ export default function CitySearch() {
         {error && (
           <div className="text-center text-red-500 py-10">{error}</div>
         )}
+        {/* Removed success message as it's now handled by useToast */}
         {!loading && !error && (
           <>
             {/* Grid */}
@@ -455,6 +622,122 @@ export default function CitySearch() {
           </>
         )}
       </main>
+
+      {/* Save Trip Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-lg font-semibold">Save Your Trip</h2>
+            
+            {error && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Trip Name *</label>
+                <input
+                  type="text"
+                  value={tripData.name}
+                  onChange={(e) => setTripData(prev => ({ ...prev, name: e.target.value }))}
+                  className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  placeholder="Enter trip name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Description *</label>
+                <textarea
+                  value={tripData.description}
+                  onChange={(e) => setTripData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  placeholder="Describe your trip"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Start Date *</label>
+                  <input
+                    type="date"
+                    value={tripData.startDate}
+                    onChange={(e) => setTripData(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">End Date *</label>
+                  <input
+                    type="date"
+                    value={tripData.endDate}
+                    onChange={(e) => setTripData(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Budget Amount *</label>
+                  <input
+                    type="number"
+                    value={tripData.budget.amount}
+                    onChange={(e) => setTripData(prev => ({ 
+                      ...prev, 
+                      budget: { ...prev.budget, amount: Number(e.target.value) }
+                    }))}
+                    className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+                    placeholder="1000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Currency</label>
+                  <select
+                    value={tripData.budget.currency}
+                    onChange={(e) => setTripData(prev => ({ 
+                      ...prev, 
+                      budget: { ...prev.budget, currency: e.target.value }
+                    }))}
+                    className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="INR">INR</option>
+                    <option value="CAD">CAD</option>
+                    <option value="AUD">AUD</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-md bg-blue-50 p-3">
+                <p className="text-sm text-blue-700">
+                  <strong>Selected Cities:</strong> {selectedCities.map(c => `${c.name}, ${c.country}`).join(' • ')}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="flex-1 rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTrip}
+                disabled={saving}
+                className="flex-1 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-700 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Trip'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

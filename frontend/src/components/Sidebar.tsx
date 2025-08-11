@@ -12,7 +12,7 @@ const navItems = [
   { key: 'trips', label: 'My Trips', to: '/trips', icon: (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"><path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/></svg>
   ) },
-  { key: 'explore', label: 'Explore Cities', to: '/dashboard#explore', icon: (
+  { key: 'explore', label: 'Explore Cities', to: '/cities', icon: (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7" strokeWidth="1.5"/><path strokeWidth="1.5" strokeLinecap="round" d="M21 21l-3.8-3.8"/></svg>
   ) },
   { key: 'budget', label: 'Budget', to: '/dashboard#budget', icon: (

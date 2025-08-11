@@ -1,4 +1,7 @@
 import React from 'react';
+import { Plus, Check } from 'lucide-react';
+import { useTrip } from '../utils/TripContext';
+import { useAuth } from '../utils/auth';
 
 export type Destination = {
   id: string
@@ -10,9 +13,37 @@ export type Destination = {
 type DestinationCardProps = {
   destination: Destination
   onAdd?: (destination: Destination) => void
+  isAdded?: boolean
 }
 
-export default function DestinationCard({ destination, onAdd }: DestinationCardProps) {
+export default function DestinationCard({ destination, onAdd, isAdded }: DestinationCardProps) {
+  const { addCity, selectedCities } = useTrip();
+  const { isAuthenticated } = useAuth();
+
+  const handleAddToTrip = () => {
+    if (!isAuthenticated) {
+      // Show login prompt or redirect
+      alert('Please log in to add destinations to your trip');
+      return;
+    }
+
+    // Add to trip context
+    addCity({
+      id: destination.id,
+      name: destination.name,
+      country: destination.country,
+      img: destination.photoUrl || ''
+    });
+
+    // Call parent onAdd if provided
+    if (onAdd) {
+      onAdd(destination);
+    }
+  };
+
+  // Check if this destination is already in the trip
+  const isInTrip = selectedCities.some(city => city.id === destination.id);
+
   return (
     <article className="group inline-block w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="relative h-40 w-full bg-neutral-100">
@@ -30,10 +61,25 @@ export default function DestinationCard({ destination, onAdd }: DestinationCardP
             <p className="text-xs text-neutral-600">{destination.country}</p>
           </div>
           <button
-            onClick={() => onAdd?.(destination)}
-            className="inline-flex items-center justify-center rounded-md bg-teal-600 px-3 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+            onClick={handleAddToTrip}
+            disabled={isInTrip}
+            className={`inline-flex items-center justify-center gap-1 rounded-md px-3 py-2 text-xs font-medium shadow-sm transition-colors ${
+              isInTrip 
+                ? 'bg-emerald-600 text-white cursor-not-allowed' 
+                : 'bg-teal-600 text-white hover:bg-teal-700'
+            }`}
           >
-            Add to Trip
+            {isInTrip ? (
+              <>
+                <Check className="h-3 w-3" />
+                Added
+              </>
+            ) : (
+              <>
+                <Plus className="h-3 w-3" />
+                Add to Trip
+              </>
+            )}
           </button>
         </div>
       </div>

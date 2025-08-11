@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useState } from 'react'
 import type { Suggestion } from './suggestions'
+import { apiFetch } from './api'
 
 export type TripDraft = {
   destination: string
@@ -41,6 +42,15 @@ type TripContextValue = {
   clearFlow: () => void
   totalCost: number
   estDailySpend: number
+  saveTripToDatabase: (tripData: {
+    name: string
+    description: string
+    startDate: string
+    endDate: string
+    budget: { amount: number; currency: string }
+  }) => Promise<any>
+  saveCityToDatabase: (city: Omit<SelectedCity, 'order'>) => Promise<any>
+  createQuickTrip: (cities: Omit<SelectedCity, 'order'>[]) => Promise<any>
 }
 
 const TripContext = createContext<TripContextValue | null>(null)
@@ -88,6 +98,88 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
     setSelectedActivities([])
   }
 
+  // Function to save city to database immediately
+  async function saveCityToDatabase(city: Omit<SelectedCity, 'order'>) {
+    try {
+      // First, try to create a quick trip with this city
+      const response = await apiFetch('/trips/quick-add', {
+        method: 'POST',
+        body: JSON.stringify({
+          cities: [city]
+        })
+      })
+
+      // Add to local state
+      addCity(city)
+      
+      return response
+    } catch (error) {
+      console.error('Error saving city to database:', error)
+      throw error
+    }
+  }
+
+  // Function to create a quick trip with multiple cities
+  async function createQuickTrip(cities: Omit<SelectedCity, 'order'>[]) {
+    try {
+      const response = await apiFetch('/trips/quick-add', {
+        method: 'POST',
+        body: JSON.stringify({
+          cities: cities
+        })
+      })
+
+      // Clear the flow after successful save
+      clearFlow()
+      
+      return response
+    } catch (error) {
+      console.error('Error creating quick trip:', error)
+      throw error
+    }
+  }
+
+  // Function to save trip to database
+  async function saveTripToDatabase(tripData: {
+    name: string
+    description: string
+    startDate: string
+    endDate: string
+    budget: { amount: number; currency: string }
+  }) {
+    try {
+      // Use the first selected city as the primary location
+      const primaryCity = selectedCities[0]
+      if (!primaryCity) {
+        throw new Error('No cities selected for the trip')
+      }
+
+      const tripPayload = {
+        ...tripData,
+        location: {
+          city: primaryCity.name,
+          country: primaryCity.country
+        },
+        coverPhoto: primaryCity.img || '',
+        tags: selectedCities.map(city => `${city.name}, ${city.country}`),
+        isPublic: false
+      }
+
+      const response = await apiFetch('/trips', {
+        method: 'POST',
+        body: JSON.stringify(tripPayload)
+      })
+
+      // Clear the flow after successful save
+      clearFlow()
+      
+      return response
+    } catch (error) {
+      console.error('Error saving trip:', error)
+      throw error
+    }
+  }
+
   // Derived totals (simple model: base $40 per cost unit)
   const totalCost = useMemo(() => selectedActivities.reduce((sum, a) => sum + (a.cost ? a.cost * 40 : 50), 0), [selectedActivities])
   const estDailySpend = useMemo(() => {
@@ -110,6 +202,9 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
       clearFlow,
       totalCost,
       estDailySpend,
+      saveTripToDatabase,
+      saveCityToDatabase,
+      createQuickTrip,
     }),
     [trip, suggestion, selectedCities, selectedActivities, totalCost, estDailySpend]
   )

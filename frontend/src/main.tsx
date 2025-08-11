@@ -18,6 +18,9 @@ import TripBudget from './pages/TripBudget.tsx'
 import TripCalendar from './pages/TripCalendar.tsx'
 import PublicItinerary from './pages/PublicItinerary.tsx'
 import MyTripCart from './components/MyTripCart.tsx'
+import Trips from './pages/Trips.tsx'
+import ProtectedRoute from './components/ProtectedRoute.tsx'
+import { ToastContainer } from './components/Toast.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -25,6 +28,7 @@ createRoot(document.getElementById('root')!).render(
       <TripProvider>
         <RouterProvider>
           <MyTripCart />
+          <ToastContainer />
           <Routes>
             <Route path="/" element={<App />} />
             <Route path="/login" element={<Auth />} />
@@ -33,12 +37,17 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/new-trip" element={<NewTrip />} />
             <Route path="/trip-plan" element={<TripPlan />} />
             <Route path="/itinerary" element={<ItineraryBento />} />
-            <Route path="/cities" element={<CitySearch />} />
+            <Route path="/cities" element={
+              <ProtectedRoute>
+                <CitySearch />
+              </ProtectedRoute>
+            } />
             <Route path="/activities" element={<ActivitySearch />} />
             <Route path="/budget" element={<TripBudget />} />
             <Route path="/calendar" element={<TripCalendar />} />
             <Route path="/public-itinerary" element={<PublicItinerary />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/trips" element={<Trips />} />
           </Routes>
         </RouterProvider>
       </TripProvider>
