@@ -11,7 +11,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Please provide your email'],
-    unique: true,
     lowercase: true,
     match: [
       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
@@ -26,7 +25,6 @@ const userSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    unique: true,
     sparse: true
   },
   avatar: {
@@ -123,20 +121,20 @@ userSchema.statics.findByGoogleId = function(googleId) {
 // Method to add refresh token
 userSchema.methods.addRefreshToken = function(token, expiresAt) {
   this.refreshTokens.push({ token, expiresAt });
-  return this.save();
+  return this.save({ validateBeforeSave: false });
 };
 
 // Method to remove refresh token
 userSchema.methods.removeRefreshToken = function(token) {
   this.refreshTokens = this.refreshTokens.filter(rt => rt.token !== token);
-  return this.save();
+  return this.save({ validateBeforeSave: false });
 };
 
 // Method to clean expired refresh tokens
 userSchema.methods.cleanExpiredTokens = function() {
   const now = new Date();
   this.refreshTokens = this.refreshTokens.filter(rt => rt.expiresAt > now);
-  return this.save();
+  return this.save({ validateBeforeSave: false });
 };
 
 module.exports = mongoose.model('User', userSchema); 
