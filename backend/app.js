@@ -20,7 +20,6 @@ const authRouter = require('./routes/auth');
 const tripsRouter = require('./routes/trips');
 const profileRouter = require('./routes/profile');
 const dashboardRouter = require('./routes/dashboard');
-const adminRouter = require('./routes/admin');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -36,7 +35,7 @@ app.use(helmet());
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
@@ -81,7 +80,6 @@ app.use('/api/users', usersRouter);
 app.use('/api/trips', tripsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api/admin', adminRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
