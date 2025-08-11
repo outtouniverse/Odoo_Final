@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { useRouter } from "../utils/router.tsx"
 import { apiFetch } from '../utils/api'
@@ -6,27 +6,90 @@ import { CalendarDays, MapPin, Wallet, Image as ImageIcon, Globe2 } from 'lucide
 
 export default function NewTrip() {
   const router = useRouter()
-  const [name, setName] = useState('Paris Adventure')
-  const [description, setDescription] = useState('A wonderful trip to explore the city and nearby regions.')
-  const [city, setCity] = useState('Paris')
-  const [country, setCountry] = useState('France')
-  const [startDate, setStartDate] = useState('2025-07-10')
-  const [endDate, setEndDate] = useState('2025-07-16')
-  const [budgetUsd, setBudgetUsd] = useState<number>(2400)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [budgetUsd, setBudgetUsd] = useState<number>(Number.NaN)
   const [coverPhoto, setCoverPhoto] = useState('')
   const [isPublic, setIsPublic] = useState(false)
+
+  const [touched, setTouched] = useState({
+    name: false,
+    description: false,
+    city: false,
+    country: false,
+    startDate: false,
+    endDate: false,
+    budget: false,
+  })
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      router.navigate('/login', { replace: true })
+    }
+  }, [])
+
+  function getFieldErrors() {
+    const errors: Record<string, string | null> = {
+      name: null,
+      description: null,
+      city: null,
+      country: null,
+      startDate: null,
+      endDate: null,
+      budget: null,
+    }
+    const nameTrim = name.trim()
+    const descTrim = description.trim()
+    const cityTrim = city.trim()
+    const countryTrim = country.trim()
+    if (nameTrim.length < 3) errors.name = 'Trip name is required (min 3 characters).'
+    if (descTrim.length < 10) errors.description = 'Description is required (min 10 characters).'
+    if (!cityTrim) errors.city = 'City is required.'
+    if (!countryTrim) errors.country = 'Country is required.'
+    if (!startDate) errors.startDate = 'Start date is required.'
+    if (!endDate) errors.endDate = 'End date is required.'
+    // Date relationships
+    if (startDate && endDate) {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const today = new Date(new Date().toDateString())
+      if (!(start instanceof Date) || isNaN(start.getTime())) errors.startDate = 'Provide a valid start date.'
+      if (!(end instanceof Date) || isNaN(end.getTime())) errors.endDate = 'Provide a valid end date.'
+      if (!errors.startDate && !errors.endDate) {
+        if (start >= end) errors.endDate = 'End date must be after start date.'
+        if (start < today) errors.startDate = 'Start date must be in the future.'
+      }
+    }
+    if (!Number.isFinite(budgetUsd) || budgetUsd <= 0) errors.budget = 'Budget must be a positive number.'
+    return errors
+  }
+
+  function validate(): string | null {
+    const errs = getFieldErrors()
+    const first = Object.values(errs).find((v) => v)
+    return first || null
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSuccess(null)
 
-    if (!name.trim() || !city.trim() || !startDate || !endDate || Number.isNaN(budgetUsd)) {
-      setError('Please complete all required fields.')
+    // mark all as touched on submit attempt
+    setTouched({ name: true, description: true, city: true, country: true, startDate: true, endDate: true, budget: true })
+
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -44,16 +107,22 @@ export default function NewTrip() {
         location: { city: city.trim(), country: country.trim() }
       }
 
-      const res = await apiFetch('/trips', { method: 'POST', body: JSON.stringify(payload) })
+      await apiFetch('/trips', { method: 'POST', body: JSON.stringify(payload) })
       setSuccess('Trip created successfully!')
-      // Redirect to dashboard or trip page after a short pause
-      setTimeout(() => router.navigate('/dashboard'), 700)
+      setTimeout(() => router.navigate('/trips'), 700)
     } catch (err: any) {
+      if (err?.status === 401) {
+        localStorage.removeItem('accessToken')
+        router.navigate('/login', { replace: true })
+        return
+      }
       setError(err.message || 'Failed to create trip')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const fieldErrors = getFieldErrors()
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 antialiased">
@@ -66,37 +135,100 @@ export default function NewTrip() {
         <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div>
             <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><MapPin className="h-3.5 w-3.5" /> Trip name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Paris Adventure" className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+              aria-invalid={!!fieldErrors.name}
+              placeholder="e.g., Paris Adventure"
+              className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${touched.name && fieldErrors.name ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+            />
+            {touched.name && fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
           </div>
 
           <div>
             <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><Globe2 className="h-3.5 w-3.5" /> Location</label>
             <div className="grid grid-cols-2 gap-3">
-              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-blue-500" />
-              <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Country" className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+              <div>
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, city: true }))}
+                  aria-invalid={!!fieldErrors.city}
+                  placeholder="City"
+                  className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${touched.city && fieldErrors.city ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+                />
+                {touched.city && fieldErrors.city && <p className="mt-1 text-xs text-red-600">{fieldErrors.city}</p>}
+              </div>
+              <div>
+                <input
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, country: true }))}
+                  aria-invalid={!!fieldErrors.country}
+                  placeholder="Country"
+                  className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${touched.country && fieldErrors.country ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+                />
+                {touched.country && fieldErrors.country && <p className="mt-1 text-xs text-red-600">{fieldErrors.country}</p>}
+              </div>
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-800">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What’s the plan?" className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, description: true }))}
+              aria-invalid={!!fieldErrors.description}
+              placeholder="What’s the plan?"
+              className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${touched.description && fieldErrors.description ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+            />
+            {touched.description && fieldErrors.description && <p className="mt-1 text-xs text-red-600">{fieldErrors.description}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><CalendarDays className="h-3.5 w-3.5" /> Start date</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, startDate: true }))}
+                aria-invalid={!!fieldErrors.startDate}
+                className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset focus:bg-white focus:ring-2 ${touched.startDate && fieldErrors.startDate ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+              />
+              {touched.startDate && fieldErrors.startDate && <p className="mt-1 text-xs text-red-600">{fieldErrors.startDate}</p>}
             </div>
             <div>
               <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><CalendarDays className="h-3.5 w-3.5" /> End date</label>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, endDate: true }))}
+                aria-invalid={!!fieldErrors.endDate}
+                className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset focus:bg-white focus:ring-2 ${touched.endDate && fieldErrors.endDate ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+              />
+              {touched.endDate && fieldErrors.endDate && <p className="mt-1 text-xs text-red-600">{fieldErrors.endDate}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><Wallet className="h-3.5 w-3.5" /> Budget (USD)</label>
-              <input type="number" value={budgetUsd} onChange={(e) => setBudgetUsd(parseFloat(e.target.value))} className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+              <input
+                type="number"
+                value={Number.isNaN(budgetUsd) ? '' : budgetUsd}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setBudgetUsd(val === '' ? Number.NaN : parseFloat(val))
+                }}
+                onBlur={() => setTouched((t) => ({ ...t, budget: true }))}
+                aria-invalid={!!fieldErrors.budget}
+                className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset focus:bg-white focus:ring-2 ${touched.budget && fieldErrors.budget ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-blue-500'}`}
+              />
+              {touched.budget && fieldErrors.budget && <p className="mt-1 text-xs text-red-600">{fieldErrors.budget}</p>}
             </div>
             <div>
               <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><ImageIcon className="h-3.5 w-3.5" /> Cover photo URL (optional)</label>

@@ -40,8 +40,14 @@ router.put('/', protect, async (req, res) => {
       });
     }
     
-    // Update fields
-    if (name !== undefined) user.name = name;
+    // Update fields with basic sanitization
+    if (name !== undefined) {
+      const sanitized = String(name).replace(/\s+/g, ' ').trim();
+      if (sanitized.length < 2 || sanitized.length > 50) {
+        return res.status(400).json({ success: false, message: 'Name must be between 2 and 50 characters' });
+      }
+      user.name = sanitized;
+    }
     if (email !== undefined) {
       // Check if email is already taken by another user
       const existingUser = await User.findOne({ email, _id: { $ne: req.user.id } });
@@ -53,7 +59,7 @@ router.put('/', protect, async (req, res) => {
       }
       user.email = email;
     }
-    if (avatar !== undefined) user.avatar = avatar;
+    if (avatar !== undefined) user.avatar = String(avatar).trim();
     if (language !== undefined) user.language = language;
     if (timezone !== undefined) user.timezone = timezone;
     if (notifications !== undefined) user.notifications = notifications;

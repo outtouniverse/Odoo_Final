@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useRouter, Link } from "../utils/router.tsx"
-import { useAuth, type Role } from '../utils/auth'
+import { useAuth, type Role } from '../utils/'
 
 type AuthMode = 'login' | 'register'
 
