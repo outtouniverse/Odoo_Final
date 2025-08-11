@@ -1,22 +1,21 @@
 import React, { useMemo, useState } from 'react'
+import { apiFetch } from './src/api'
+import { useRouter } from './src/router'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>('login')
-
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
-
   const [regName, setRegName] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
-
   const [forgotEmail, setForgotEmail] = useState('')
-
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter() // <-- INSIDE the component
 
   const title = useMemo(() => {
     if (mode === 'login') return 'Welcome back'
@@ -40,7 +39,16 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Logged in. This is a demo UI — wire up your auth API here.')
+    apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+    })
+      .then((data) => {
+        localStorage.setItem('accessToken', data.data.token)
+        setMessage('Logged in. Redirecting…')
+        setTimeout(() => router.navigate('/dashboard'), 450)
+      })
+      .catch((err) => setError(err.message))
   }
 
   function onSubmitRegister(e: React.FormEvent) {
@@ -59,8 +67,16 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Account created. You can now sign in.')
-    setMode('login')
+    apiFetch('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ name: regName, email: regEmail, password: regPassword }),
+    })
+      .then((data) => {
+        localStorage.setItem('accessToken', data.data.token)
+        setMessage('Account created. Redirecting…')
+        setTimeout(() => router.navigate('/dashboard'), 450)
+      })
+      .catch((err) => setError(err.message))
   }
 
   function onSubmitForgot(e: React.FormEvent) {
@@ -72,7 +88,10 @@ export default function Auth() {
       return
     }
     setMessage('Password reset link sent. Check your inbox.')
+    // Optionally, call your backend's forgot password endpoint here
   }
+
+  
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 antialiased">

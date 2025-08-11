@@ -1,3 +1,4 @@
+import React from 'react';
 function Icon({ name, className = 'h-5 w-5' }: { name: 'drag' | 'budget' | 'city' | 'discovery' | 'timeline' | 'share' | 'plan' | 'organize' | 'publish'; className?: string }) {
   switch (name) {
     case 'drag':
