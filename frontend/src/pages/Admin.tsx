@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
-import { useAuth } from '../utils/auth'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useRouter, Link } from '../utils/router'
 import KPICard from '../components/admin/KPICard'
+import { useAuth } from '../utils/auth'
+import { apiFetch } from '../utils/api'
 
 type SectionKey = 'overview' | 'users' | 'trips' | 'moderation' | 'library' | 'analytics' | 'settings'
 
@@ -15,22 +16,92 @@ const sections: { key: SectionKey; label: string }[] = [
     { key: 'settings', label: 'Settings' },
 ]
 
+interface User {
+    _id: string
+    name: string
+    email: string
+    role: string
+    isActive: boolean
+    createdAt: string
+}
+
+interface Trip {
+    _id: string
+    name: string
+    description: string
+    startDate: string
+    endDate: string
+    status: string
+    user: {
+        name: string
+        email: string
+    }
+    budget: {
+        amount: number
+        currency: string
+    }
+    location: {
+        city: string
+        country: string
+    }
+    createdAt: string
+}
+
+interface Destination {
+    _id: string
+    name: string
+    country: string
+    region?: string
+    costIndex: number
+    popularity: number
+    image?: string
+    description?: string
+}
+
+interface Analytics {
+    totalUsers: number
+    totalTrips: number
+    popularDestinations: Array<{
+        _id: string
+        name: string
+        popularity: number
+    }>
+}
+
 export default function Admin() {
     const { user, isAuthenticated, hasRole, logout } = useAuth()
     const { navigate, path } = useRouter()
 
-    // Guard: require auth and admin roles
-    const allowed = isAuthenticated && hasRole(['super_admin', 'moderator', 'support'])
+    // State for dynamic data
+    const [users, setUsers] = useState<User[]>([])
+    const [trips, setTrips] = useState<Trip[]>([])
+    const [destinations, setDestinations] = useState<Destination[]>([])
+    const [analytics, setAnalytics] = useState<Analytics>({
+        totalUsers: 0,
+        totalTrips: 0,
+        popularDestinations: []
+    })
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    // Guard: require auth and super_admin role only
+    const allowed = isAuthenticated && hasRole('super_admin')
+
+    // Redirect if not allowed (avoid setState in render)
+    useEffect(() => {
+        if (!allowed) {
+            navigate('/login', { replace: true })
+        }
+    }, [allowed, navigate])
+
     if (!allowed) {
-        navigate('/login', { replace: true })
         return null
     }
 
     const visibleSections = useMemo(() => {
-        if (user?.role === 'super_admin') return sections
-        if (user?.role === 'moderator') return sections.filter((s) => ['overview', 'trips', 'moderation', 'analytics'].includes(s.key))
-        return sections.filter((s) => ['overview', 'analytics'].includes(s.key))
-    }, [user?.role])
+        // Only super_admin can see all sections
+        return sections
+    }, [])
 
     const active: SectionKey = useMemo(() => {
         const hash = path.split('#')[1] || ''
@@ -40,6 +111,109 @@ export default function Admin() {
 
     function setSection(key: SectionKey) {
         navigate(`/admin#${key}`)
+    }
+
+    // Fetch data based on active section
+    useEffect(() => {
+        if (!allowed) return
+
+        const fetchData = async () => {
+            setLoading(true)
+            setError(null)
+            
+            try {
+                switch (active) {
+                    case 'overview':
+                        await Promise.all([
+                            fetchUsers(),
+                            fetchTrips(),
+                            fetchAnalytics()
+                        ])
+                        break
+                    case 'users':
+                        await fetchUsers()
+                        break
+                    case 'trips':
+                        await fetchTrips()
+                        break
+                    case 'library':
+                        await fetchDestinations()
+                        break
+                    case 'analytics':
+                        await fetchAnalytics()
+                        break
+                }
+            } catch (err: any) {
+                setError(err.message || 'Failed to fetch data')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchData()
+    }, [active, allowed])
+
+    const fetchUsers = async () => {
+        try {
+            const response = await apiFetch('/admin/users')
+            if (response.success) {
+                const normalized = (response.data as any[]).map((u: any) => ({
+                    _id: u._id || u.id,
+                    name: u.name,
+                    email: u.email,
+                    role: u.role,
+                    isActive: u.isActive,
+                    createdAt: u.createdAt
+                }))
+                setUsers(normalized)
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch users:', err)
+            setError('Failed to fetch users. Please ensure you are logged in as admin and backend is running.')
+        }
+    }
+
+    const fetchTrips = async () => {
+        try {
+            const response = await apiFetch('/admin/trips')
+            if (response.success) {
+                setTrips(response.data)
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch trips:', err)
+            setError('Failed to fetch trips. Please ensure backend is running.')
+        }
+    }
+
+    const fetchDestinations = async () => {
+        try {
+            const response = await apiFetch('/admin/destinations')
+            if (response.success) {
+                setDestinations(response.data)
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch destinations:', err)
+            setError('Failed to fetch destinations. Please ensure backend is running.')
+        }
+    }
+
+    const fetchAnalytics = async () => {
+        try {
+            const [usersResponse, tripsResponse, popularResponse] = await Promise.all([
+                apiFetch('/admin/analytics/users'),
+                apiFetch('/admin/analytics/trips'),
+                apiFetch('/admin/analytics/popular')
+            ])
+
+            setAnalytics({
+                totalUsers: usersResponse.success ? usersResponse.data.totalUsers : 0,
+                totalTrips: tripsResponse.success ? tripsResponse.data.totalTrips : 0,
+                popularDestinations: popularResponse.success ? (popularResponse.data.destinations || []).map((d: any) => ({ _id: d._id, name: d.name, popularity: d.popularity || 0 })) : []
+            })
+        } catch (err: any) {
+            console.error('Failed to fetch analytics:', err)
+            setError('Failed to fetch analytics. Please ensure backend is running.')
+        }
     }
 
     return (
@@ -61,7 +235,7 @@ export default function Admin() {
                             ))}
                         </nav>
                         <div className="flex items-center gap-2">
-                            <span className="hidden text-sm text-neutral-700 md:inline">{user?.name} · {user?.role.replace('_', ' ')}</span>
+                            <span className="hidden text-sm text-neutral-700 md:inline">{user?.name} · Super Admin</span>
                             <button onClick={logout} className="inline-flex items-center rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-800 hover:bg-neutral-50">Logout</button>
                         </div>
                     </div>
@@ -69,24 +243,36 @@ export default function Admin() {
             </header>
 
             <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                {active === 'overview' && <OverviewSection />}
-                {active === 'users' && (user?.role === 'super_admin' ? <UsersSection /> : <NotAllowed />)}
-                {active === 'trips' && (user?.role === 'super_admin' || user?.role === 'moderator' ? <TripsSection /> : <NotAllowed />)}
-                {active === 'moderation' && (user?.role === 'super_admin' || user?.role === 'moderator' ? <ModerationSection /> : <NotAllowed />)}
-                {active === 'library' && (user?.role === 'super_admin' || user?.role === 'moderator' ? <LibrarySection /> : <NotAllowed />)}
-                {active === 'analytics' && <AnalyticsSection />}
-                {active === 'settings' && (user?.role === 'super_admin' ? <SettingsSection /> : <NotAllowed />)}
+                {error && (
+                    <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+                
+                {loading && (
+                    <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                        Loading data...
+                    </div>
+                )}
+
+                {active === 'overview' && <OverviewSection analytics={analytics} />}
+                {active === 'users' && <UsersSection users={users} onRefresh={fetchUsers} />}
+                {active === 'trips' && <TripsSection trips={trips} onRefresh={fetchTrips} />}
+                {active === 'moderation' && <ModerationSection />}
+                {active === 'library' && <LibrarySection destinations={destinations} onRefresh={fetchDestinations} />}
+                {active === 'analytics' && <AnalyticsSection analytics={analytics} />}
+                {active === 'settings' && <SettingsSection />}
             </main>
         </div>
     )
 }
 
-function OverviewSection() {
+function OverviewSection({ analytics }: { analytics: Analytics }) {
     return (
         <div className="space-y-8">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <KPICard title="Total Users" value="12,480" trend="↑ 3.1%" />
-                <KPICard title="Active Trips" value="842" trend="↑ 1.4%" />
+                <KPICard title="Total Users" value={analytics.totalUsers.toLocaleString()} trend="↑ 3.1%" />
+                <KPICard title="Active Trips" value={analytics.totalTrips.toLocaleString()} trend="↑ 1.4%" />
                 <KPICard title="Avg. Trip Budget" value="$2,130" trend="≈" />
                 <KPICard title="Flagged Items" value="19" trend="↓ 0.6%" />
             </div>
@@ -113,10 +299,10 @@ function OverviewSection() {
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
                     <h3 className="text-sm font-semibold">Top Cities</h3>
                     <ul className="mt-3 space-y-2 text-sm text-neutral-700">
-                        {['Paris', 'Tokyo', 'Barcelona', 'New York', 'Bangkok'].map((c) => (
-                            <li key={c} className="flex items-center justify-between">
-                                <span>{c}</span>
-                                <span className="text-neutral-500">{Math.floor(Math.random() * 400) + 100}</span>
+                        {analytics.popularDestinations.slice(0, 5).map((dest) => (
+                            <li key={dest._id} className="flex items-center justify-between">
+                                <span>{dest.name}</span>
+                                <span className="text-neutral-500">{dest.popularity}</span>
                             </li>
                         ))}
                     </ul>
@@ -126,21 +312,14 @@ function OverviewSection() {
     )
 }
 
-function NotAllowed() {
-    return (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
-            You do not have permission to view this section.
-        </div>
-    )
-}
-
-function UsersSection() {
+function UsersSection({ users, onRefresh }: { users: User[], onRefresh: () => void }) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">User Management</h3>
                 <div className="flex gap-2">
                     <input placeholder="Search users…" className="h-9 w-56 rounded-md border border-neutral-300 px-3 text-sm" />
+                    <button onClick={onRefresh} className="h-9 rounded-md border border-neutral-300 px-3 text-sm hover:bg-neutral-50">Refresh</button>
                     <button className="h-9 rounded-md border border-neutral-300 px-3 text-sm hover:bg-neutral-50">Export CSV</button>
                 </div>
             </div>
@@ -148,21 +327,24 @@ function UsersSection() {
                 <table className="min-w-full text-sm">
                     <thead className="bg-neutral-50 text-neutral-600">
                         <tr>
-                            {['User ID', 'Name', 'Email', 'Role', 'Status', 'Joined', 'Trips', ''].map((h) => (
+                            {['User ID', 'Name', 'Email', 'Role', 'Status', 'Joined', ''].map((h) => (
                                 <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
-                        {Array.from({ length: 8 }).map((_, i) => (
-                            <tr key={i} className="border-t border-neutral-200">
-                                <td className="px-4 py-3">usr_{1000 + i}</td>
-                                <td className="px-4 py-3">Alex Traveler</td>
-                                <td className="px-4 py-3">alex{i}@mail.com</td>
-                                <td className="px-4 py-3">user</td>
-                                <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">Active</span></td>
-                                <td className="px-4 py-3">2024-01-0{i + 1}</td>
-                                <td className="px-4 py-3">{Math.floor(Math.random() * 6)}</td>
+                        {users.map((user) => (
+                            <tr key={user._id} className="border-t border-neutral-200">
+                                <td className="px-4 py-3">{user._id.slice(-6)}</td>
+                                <td className="px-4 py-3">{user.name}</td>
+                                <td className="px-4 py-3">{user.email}</td>
+                                <td className="px-4 py-3">{user.role}</td>
+                                <td className="px-4 py-3">
+                                    <span className={`rounded-full px-2 py-0.5 text-xs ${user.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                                        {user.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString()}</td>
                                 <td className="px-4 py-3 text-right">
                                     <button className="rounded-md px-2 py-1 text-xs text-teal-700 hover:bg-teal-50">View</button>
                                     <button className="ml-1 rounded-md px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50">Edit</button>
@@ -172,19 +354,12 @@ function UsersSection() {
                         ))}
                     </tbody>
                 </table>
-                <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-3 text-sm text-neutral-600">
-                    <span>Page 1 of 10</span>
-                    <div className="flex gap-2">
-                        <button className="rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-50">Prev</button>
-                        <button className="rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-50">Next</button>
-                    </div>
-                </div>
             </div>
         </div>
     )
 }
 
-function TripsSection() {
+function TripsSection({ trips, onRefresh }: { trips: Trip[], onRefresh: () => void }) {
     return (
         <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -197,6 +372,7 @@ function TripsSection() {
                     <option>Private</option>
                     <option>Flagged</option>
                 </select>
+                <button onClick={onRefresh} className="h-9 rounded-md border border-neutral-300 px-3 text-sm hover:bg-neutral-50">Refresh</button>
             </div>
             <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
                 <table className="min-w-full text-sm">
@@ -208,15 +384,19 @@ function TripsSection() {
                         </tr>
                     </thead>
                     <tbody>
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <tr key={i} className="border-t border-neutral-200">
-                                <td className="px-4 py-3">trip_{500 + i}</td>
-                                <td className="px-4 py-3">Jamie Voyager</td>
-                                <td className="px-4 py-3">Paris, Rome</td>
-                                <td className="px-4 py-3">2025-05-0{i + 1}</td>
-                                <td className="px-4 py-3">2025-05-1{i + 1}</td>
-                                <td className="px-4 py-3">${(1200 + i * 230).toLocaleString()}</td>
-                                <td className="px-4 py-3">Public</td>
+                        {trips.map((trip) => (
+                            <tr key={trip._id} className="border-t border-neutral-200">
+                                <td className="px-4 py-3">{trip._id.slice(-6)}</td>
+                                <td className="px-4 py-3">{trip.user.name}</td>
+                                <td className="px-4 py-3">{trip.location.city}, {trip.location.country}</td>
+                                <td className="px-4 py-3">{new Date(trip.startDate).toLocaleDateString()}</td>
+                                <td className="px-4 py-3">{new Date(trip.endDate).toLocaleDateString()}</td>
+                                <td className="px-4 py-3">${trip.budget.amount.toLocaleString()} {trip.budget.currency}</td>
+                                <td className="px-4 py-3">
+                                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                                        {trip.status}
+                                    </span>
+                                </td>
                                 <td className="px-4 py-3 text-right">
                                     <button className="rounded-md px-2 py-1 text-xs text-teal-700 hover:bg-teal-50">View</button>
                                     <button className="ml-1 rounded-md px-2 py-1 text-xs text-amber-700 hover:bg-amber-50">Flag</button>
@@ -256,20 +436,24 @@ function ModerationSection() {
     )
 }
 
-function LibrarySection() {
+function LibrarySection({ destinations, onRefresh }: { destinations: Destination[], onRefresh: () => void }) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Destination & Activity Library</h3>
-                <button className="rounded-md bg-teal-600 px-3 py-1.5 text-sm text-white hover:bg-teal-700">Add Item</button>
+                <div className="flex gap-2">
+                    <button onClick={onRefresh} className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50">Refresh</button>
+                    <button className="rounded-md bg-teal-600 px-3 py-1.5 text-sm text-white hover:bg-teal-700">Add Item</button>
+                </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                    <article key={i} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+                {destinations.map((dest) => (
+                    <article key={dest._id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h4 className="font-medium">City #{i + 1}</h4>
-                                <p className="text-xs text-neutral-600">Tags: beach, food</p>
+                                <h4 className="font-medium">{dest.name}</h4>
+                                <p className="text-xs text-neutral-600">{dest.country}</p>
+                                <p className="text-xs text-neutral-500">Popularity: {dest.popularity}</p>
                             </div>
                             <div className="flex gap-1">
                                 <button className="rounded-md px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50">Edit</button>
@@ -283,7 +467,7 @@ function LibrarySection() {
     )
 }
 
-function AnalyticsSection() {
+function AnalyticsSection({ analytics }: { analytics: Analytics }) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">

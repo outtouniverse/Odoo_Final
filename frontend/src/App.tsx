@@ -1,5 +1,5 @@
 /*
-  App2.tsx
+  App.tsx
   Standalone landing page inspired by the attached travel agency design.
   - Uses Tailwind utility classes only
   - Hero section copy tailored for a smart, all‑in‑one trip dashboard
@@ -96,7 +96,7 @@ function Badge({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function App2() {
+export default function App() {
   return (
     <div className="min-h-screen w-full ">
       {/* Outer framed card */}

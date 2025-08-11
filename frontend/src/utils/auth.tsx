@@ -53,7 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(newUser)
     }, [])
 
-    const logout = useCallback(() => setUser(null), [])
+    const logout = useCallback(() => {
+        try {
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('currentUser')
+            localStorage.removeItem(STORAGE_KEY)
+        } catch {}
+        setUser(null)
+    }, [])
 
     const hasRole = useCallback(
         (roles: Role | Role[]) => {
@@ -69,19 +76,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         [user, login, logout, hasRole]
     )
 
-    return <AuthContext.Provider value={ value }> { children } </AuthContext.Provider>
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    )
 }
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
     const { isAuthenticated } = useAuth()
     if (!isAuthenticated) return null
-    return <>{ children } </>
+    return <>{children}</>
 }
 
 export function RequireRole({ allow, children }: { allow: Role | Role[]; children: React.ReactNode }) {
     const { hasRole } = useAuth()
     if (!hasRole(allow)) return null
-    return <>{ children } </>
-}
-
-
+    return <>{children}</>
+} 

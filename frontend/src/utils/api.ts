@@ -1,7 +1,16 @@
 const API_URL = "http://localhost:3000/api";
 
 export function getToken() {
-  return localStorage.getItem("accessToken");
+  const t = localStorage.getItem("accessToken");
+  if (t) return t;
+  try {
+    const raw = localStorage.getItem("globetrotter.auth");
+    if (!raw) return null as any;
+    const parsed = JSON.parse(raw);
+    return parsed?.token || null;
+  } catch {
+    return null as any;
+  }
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {

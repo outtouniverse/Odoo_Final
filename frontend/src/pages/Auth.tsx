@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useRouter, Link } from "../utils/router.tsx"
-import { useAuth, type Role } from '../utils/'
+import { useAuth, type Role } from '../utils/auth.tsx'
+import { apiFetch } from '../utils/api'
 
 type AuthMode = 'login' | 'register'
 
@@ -19,8 +20,8 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [adminRole, setAdminRole] = useState<Role>('super_admin')
   const [showForgotInline, setShowForgotInline] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const router = useRouter()
   const { login } = useAuth()
@@ -34,55 +35,127 @@ export default function Auth() {
     return /.+@.+\..+/.test(email)
   }
 
-  function onSubmitLogin(e: React.FormEvent) {
+  async function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
+    setLoading(true)
+    
     if (!validateEmail(loginEmail)) {
       setError('Enter a valid email address.')
+      setLoading(false)
       return
     }
     if (loginPassword.length < 6) {
       setError('Password must be at least 6 characters.')
+      setLoading(false)
       return
     }
-    // Demo: if email includes 'admin', sign in as selected admin role; else as normal user
-    const isAdmin = /admin/i.test(loginEmail)
-    const role: Role = isAdmin ? adminRole : 'support'
-    login({
-      name: loginEmail.split('@')[0] || 'User',
-      email: loginEmail,
-      role,
-      token: Math.random().toString(36).slice(2)
-    })
-    setMessage('Logged in. Redirecting…')
-    setTimeout(() => router.navigate(isAdmin ? '/admin' : '/dashboard'), 450)
+
+    try {
+      const response = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword
+        })
+      })
+
+      if (response.success) {
+        localStorage.setItem('accessToken', response.data.accessToken)
+        localStorage.setItem('currentUser', JSON.stringify({
+          id: response.data.user._id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          avatar: response.data.user.avatar || ''
+        }))
+
+        login({
+          name: response.data.user.name,
+          email: response.data.user.email,
+          role: response.data.user.role === 'admin' ? 'super_admin' : 'support',
+          token: response.data.accessToken
+        })
+
+        if (response.data.user.role === 'admin') {
+          setMessage('Admin login successful. Redirecting…')
+          setTimeout(() => router.navigate('/admin'), 450)
+        } else {
+          setMessage('Logged in successfully. Redirecting…')
+          setTimeout(() => router.navigate('/dashboard'), 450)
+        }
+      }
+    } catch (err: any) {
+      if (err.status === 401) {
+        setError('Invalid email or password. Please check your credentials.')
+      } else if (err.message?.includes('fetch') || err.message?.includes('network')) {
+        setError('Backend server is not running. Please start the backend server first.')
+      } else {
+        setError(err.message || 'Login failed. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function onSubmitRegister(e: React.FormEvent) {
+  async function onSubmitRegister(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
+    setLoading(true)
+    
     if (regName.trim().length < 2) {
       setError('Please enter your full name.')
+      setLoading(false)
       return
     }
     if (!validateEmail(regEmail)) {
       setError('Enter a valid email address.')
+      setLoading(false)
       return
     }
     if (regPassword.length < 6) {
       setError('Password must be at least 6 characters.')
+      setLoading(false)
       return
     }
-    login({
-      name: regName,
-      email: regEmail,
-      role: 'support',
-      token: Math.random().toString(36).slice(2)
-    })
-    setMessage('Account created. Redirecting…')
-    setTimeout(() => router.navigate('/dashboard'), 450)
+    
+    try {
+      const response = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: regName,
+          email: regEmail,
+          password: regPassword
+        })
+      })
+
+      if (response.success) {
+        // Store the token and user data
+        localStorage.setItem('accessToken', response.data.accessToken)
+        localStorage.setItem('currentUser', JSON.stringify({
+          id: response.data.user._id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          avatar: response.data.user.avatar || ''
+        }))
+
+        // Login to frontend context
+        login({
+          name: response.data.user.name,
+          email: response.data.user.email,
+          role: 'support',
+          token: response.data.accessToken
+        })
+
+        setMessage('Account created successfully. Redirecting…')
+        setTimeout(() => router.navigate('/dashboard'), 450)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   function onSubmitForgot(e: React.FormEvent) {
@@ -142,7 +215,7 @@ export default function Auth() {
             <p className="mt-1 text-sm text-neutral-600">
               {mode === 'login' && !showForgotInline && 'Sign in to access your itineraries and keep planning.'}
               {mode === 'register' && 'Set up your GlobeTrotter account to start building trips.'}
-              {mode === 'login' && showForgotInline && 'We’ll email you a link to reset your password.'}
+              {mode === 'login' && showForgotInline && 'We\'ll email you a link to reset your password.'}
             </p>
 
             {message && (
@@ -192,14 +265,7 @@ export default function Auth() {
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="admin-role" className="mb-1 block text-xs font-medium text-neutral-700">Admin role (type an email with 'admin' to use)</label>
-                  <select id="admin-role" value={adminRole} onChange={(e) => setAdminRole(e.target.value as Role)} className="w-full rounded-md border-neutral-300 px-3 py-2 text-xs text-neutral-700">
-                    <option value="super_admin">Super Admin</option>
-                    <option value="moderator">Travel Moderator</option>
-                    <option value="support">Support Staff</option>
-                  </select>
-                </div>
+                
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-2">
                     <input id="remember" type="checkbox" className="h-4 w-4 rounded border-neutral-300 text-teal-600 focus:ring-teal-500" />
@@ -208,7 +274,13 @@ export default function Auth() {
                   <button type="button" onClick={() => setShowForgotInline(true)} className="text-xs text-neutral-700 hover:text-neutral-900">Forgot password?</button>
                 </div>
                 <div className="pt-2">
-                  <button type="submit" className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Sign In</button>
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Signing In...' : 'Sign In'}
+                  </button>
                 </div>
                 <p className="text-center text-xs text-neutral-600">
                   New here?{' '}
@@ -256,7 +328,13 @@ export default function Auth() {
                   />
                 </div>
                 <div className="pt-2">
-                  <button type="submit" className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Create Account</button>
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Creating Account...' : 'Create Account'}
+                  </button>
                 </div>
                 <p className="text-center text-xs text-neutral-600">
                   Already have an account?{' '}
@@ -291,7 +369,7 @@ export default function Auth() {
           </div>
 
           <p className="mx-auto max-w-md px-2 py-6 text-center text-[11px] leading-relaxed text-neutral-500">
-            By continuing, you agree to GlobeTrotter’s Terms and acknowledge our Privacy Policy.
+            By continuing, you agree to GlobeTrotter's Terms and acknowledge our Privacy Policy.
           </p>
         </div>
       </main>
