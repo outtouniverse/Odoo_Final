@@ -14,6 +14,17 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
     useEffect(() => {
         let mounted = true
+
+        // Prefill from localStorage if available for instant UI
+        try {
+            const cached = localStorage.getItem('currentUser')
+            if (cached) {
+                const u = JSON.parse(cached)
+                if (u?.name && mounted) setUserName(u.name)
+                if (u?.avatar && mounted) setAvatar(u.avatar)
+            }
+        } catch (_) {}
+
         const token = localStorage.getItem('accessToken')
         if (!token) return // avoid unauthorized calls from public pages
 
@@ -29,6 +40,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             .catch((err: any) => {
                 if (err?.status === 401) {
                     localStorage.removeItem('accessToken')
+                    localStorage.removeItem('currentUser')
                     router.navigate('/login', { replace: true })
                     return
                 }
@@ -55,6 +67,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             // ignore network error on logout
         } finally {
             localStorage.removeItem('accessToken')
+            localStorage.removeItem('currentUser')
             setOpen(false)
             window.location.href = '/login'
         }

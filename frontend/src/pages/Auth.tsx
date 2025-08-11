@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { useRouter, Link, RouterProvider, Routes, Route } from "../utils/router.tsx"
+import { useRouter, Link } from "../utils/router.tsx"
+import { apiFetch } from "../utils/api"
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
@@ -31,7 +32,7 @@ export default function Auth() {
     return /.+@.+\..+/.test(email)
   }
 
-  function onSubmitLogin(e: React.FormEvent) {
+  async function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -43,11 +44,29 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Logged in. Redirecting…')
-    setTimeout(() => router.navigate('/dashboard'), 450)
+    try {
+      const res = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      })
+      const accessToken: string | undefined = res?.data?.accessToken
+      const user = res?.data?.user
+      if (!accessToken || !user) throw new Error('Invalid response from server')
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: user._id || user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || ''
+      }))
+      setMessage('Logged in. Redirecting…')
+      router.navigate('/dashboard', { replace: true })
+    } catch (err: any) {
+      setError(err?.message || 'Login failed')
+    }
   }
 
-  function onSubmitRegister(e: React.FormEvent) {
+  async function onSubmitRegister(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -63,11 +82,29 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    setMessage('Account created. Redirecting…')
-    setTimeout(() => router.navigate('/dashboard'), 450)
+    try {
+      const res = await apiFetch('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword })
+      })
+      const accessToken: string | undefined = res?.data?.accessToken
+      const user = res?.data?.user
+      if (!accessToken || !user) throw new Error('Invalid response from server')
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: user._id || user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || ''
+      }))
+      setMessage('Account created. Redirecting…')
+      router.navigate('/dashboard', { replace: true })
+    } catch (err: any) {
+      setError(err?.message || 'Registration failed')
+    }
   }
 
-  function onSubmitForgot(e: React.FormEvent) {
+  async function onSubmitForgot(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -75,7 +112,15 @@ export default function Auth() {
       setError('Enter a valid email address.')
       return
     }
-    setMessage('Password reset link sent. Check your inbox.')
+    try {
+      const res = await apiFetch('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: forgotEmail })
+      })
+      setMessage(res?.message || 'Password reset link sent. Check your inbox.')
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send reset link')
+    }
   }
 
   return (

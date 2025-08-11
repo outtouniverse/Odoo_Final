@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { useRouter } from "../utils/router.tsx"
 import { apiFetch } from '../utils/api'
@@ -6,19 +6,26 @@ import { CalendarDays, MapPin, Wallet, Image as ImageIcon, Globe2 } from 'lucide
 
 export default function NewTrip() {
   const router = useRouter()
-  const [name, setName] = useState('Paris Adventure')
-  const [description, setDescription] = useState('A wonderful trip to explore the city and nearby regions.')
-  const [city, setCity] = useState('Paris')
-  const [country, setCountry] = useState('France')
-  const [startDate, setStartDate] = useState('2025-07-10')
-  const [endDate, setEndDate] = useState('2025-07-16')
-  const [budgetUsd, setBudgetUsd] = useState<number>(2400)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [budgetUsd, setBudgetUsd] = useState<number>(Number.NaN)
   const [coverPhoto, setCoverPhoto] = useState('')
   const [isPublic, setIsPublic] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      router.navigate('/login', { replace: true })
+    }
+  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,11 +51,15 @@ export default function NewTrip() {
         location: { city: city.trim(), country: country.trim() }
       }
 
-      const res = await apiFetch('/trips', { method: 'POST', body: JSON.stringify(payload) })
+      await apiFetch('/trips', { method: 'POST', body: JSON.stringify(payload) })
       setSuccess('Trip created successfully!')
-      // Redirect to dashboard or trip page after a short pause
       setTimeout(() => router.navigate('/dashboard'), 700)
     } catch (err: any) {
+      if (err?.status === 401) {
+        localStorage.removeItem('accessToken')
+        router.navigate('/login', { replace: true })
+        return
+      }
       setError(err.message || 'Failed to create trip')
     } finally {
       setSubmitting(false)
@@ -96,7 +107,10 @@ export default function NewTrip() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><Wallet className="h-3.5 w-3.5" /> Budget (USD)</label>
-              <input type="number" value={budgetUsd} onChange={(e) => setBudgetUsd(parseFloat(e.target.value))} className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 focus:bg-white focus:ring-2 focus:ring-blue-500" />
+              <input type="number" value={Number.isNaN(budgetUsd) ? '' : budgetUsd} onChange={(e) => {
+                const val = e.target.value
+                setBudgetUsd(val === '' ? Number.NaN : parseFloat(val))
+              }} className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm ring-1 ring-inset ring-neutral-200 focus:bg-white focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-800"><ImageIcon className="h-3.5 w-3.5" /> Cover photo URL (optional)</label>

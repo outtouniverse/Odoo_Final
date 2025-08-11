@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Mail, User, Check, Trash2, Plus, Globe, Settings, Shield } from 'lucide-react'
+import { Camera, Mail, User, Check, Globe, Settings, Shield } from 'lucide-react'
 import { apiFetch } from '../utils/api'
 
 type ProfileCardProps = {
@@ -8,14 +8,14 @@ type ProfileCardProps = {
   initialAvatarUrl?: string
 }
 
-type SavedDestination = {
-  _id?: string
+type TripItem = {
+  _id: string
   name: string
-  city: string
-  country: string
-  coordinates?: { latitude?: number; longitude?: number }
-  notes?: string
-  savedAt?: string
+  location?: { city?: string; country?: string }
+  startDate?: string
+  endDate?: string
+  status?: string
+  coverPhoto?: string
 }
 
 type NotificationsPref = { email?: boolean; push?: boolean; marketing?: boolean }
@@ -41,10 +41,8 @@ export default function ProfileCard({ initialName = 'Alex Traveler', initialEmai
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
-  // Saved destinations
-  const [destinations, setDestinations] = useState<SavedDestination[]>([])
-  const [newDest, setNewDest] = useState<SavedDestination>({ name: '', city: '', country: '', notes: '' })
-  const [addingDest, setAddingDest] = useState(false)
+  // User trips
+  const [trips, setTrips] = useState<TripItem[]>([])
 
   // Preferences
   const [prefs, setPrefs] = useState<Preferences>({ theme: 'light', notifications: { email: true, push: true, marketing: false } })
@@ -52,20 +50,22 @@ export default function ProfileCard({ initialName = 'Alex Traveler', initialEmai
   const [deletePassword, setDeletePassword] = useState('')
   const [deleting, setDeleting] = useState(false)
 
-  // Load profile from backend
+  // Load profile and trips from backend
   useEffect(() => {
     let mounted = true
     setLoading(true)
     setError(null)
-    apiFetch('/profile')
-      .then((res) => {
+    Promise.all([
+      apiFetch('/profile').catch((e) => { throw e }),
+      apiFetch('/trips').catch((e) => { throw e })
+    ])
+      .then(([profileRes, tripsRes]) => {
         if (!mounted) return
-        const u = res.data || res // tolerate either shape
+        const u = profileRes.data || profileRes
         if (u) {
           setName(u.name ?? initialName)
           setEmail(u.email ?? initialEmail)
           if (u.avatar) setAvatarUrl(u.avatar)
-          if (Array.isArray(u.savedDestinations)) setDestinations(u.savedDestinations)
           setPrefs({
             language: u.language,
             timezone: u.timezone,
@@ -75,8 +75,10 @@ export default function ProfileCard({ initialName = 'Alex Traveler', initialEmai
             privacySettings: u.privacySettings
           })
         }
+        const tripsData = (tripsRes.data || tripsRes) as TripItem[]
+        if (Array.isArray(tripsData)) setTrips(tripsData)
       })
-      .catch((e) => {
+      .catch((e: any) => {
         setError(e.message || 'Failed to load profile')
       })
       .finally(() => mounted && setLoading(false))
@@ -146,33 +148,7 @@ export default function ProfileCard({ initialName = 'Alex Traveler', initialEmai
     }
   }
 
-  async function onAddDestination() {
-    if (!newDest.name || !newDest.city || !newDest.country) return
-    try {
-      setAddingDest(true)
-      const res = await apiFetch('/profile/saved-destinations', {
-        method: 'POST',
-        body: JSON.stringify(newDest)
-      })
-      const added = res.data || res
-      setDestinations((d) => [added, ...d])
-      setNewDest({ name: '', city: '', country: '', notes: '' })
-    } catch (e: any) {
-      setError(e.message || 'Failed to add destination')
-    } finally {
-      setAddingDest(false)
-    }
-  }
-
-  async function onRemoveDestination(id?: string) {
-    if (!id) return
-    try {
-      await apiFetch(`/profile/saved-destinations/${id}`, { method: 'DELETE' })
-      setDestinations((d) => d.filter((x) => x._id !== id))
-    } catch (e: any) {
-      setError(e.message || 'Failed to remove destination')
-    }
-  }
+  // No saved-destination add/remove here; section shows user's trips
 
   async function onSavePreferences() {
     try {
@@ -273,38 +249,30 @@ export default function ProfileCard({ initialName = 'Alex Traveler', initialEmai
         </button>
       </div>
 
-      {/* Saved Destinations */}
+      {/* User Trips */}
       <div className="mt-10">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-neutral-900"><Globe className="h-4 w-4" /> Saved Destinations</h3>
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-neutral-900"><Globe className="h-4 w-4" /> Your Trips</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          {destinations.length === 0 && (
-            <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">No saved destinations yet.</div>
+          {trips.length === 0 && (
+            <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">No trips yet.</div>
           )}
-          {destinations.map((d) => (
-            <div key={d._id || `${d.name}-${d.city}-${d.country}`} className="flex items-start justify-between rounded-md border border-neutral-200 bg-white p-3 text-sm">
-              <div>
-                <div className="font-medium text-neutral-900">{d.name}</div>
-                <div className="text-xs text-neutral-600">{d.city}, {d.country}</div>
-                {d.notes && <div className="mt-1 text-xs text-neutral-600">{d.notes}</div>}
+          {trips.map((t) => (
+            <div key={t._id} className="flex items-start gap-3 rounded-md border border-neutral-200 bg-white p-3 text-sm">
+              <div className="h-12 w-16 overflow-hidden rounded bg-neutral-100">
+                {t.coverPhoto ? <img src={t.coverPhoto} alt="Cover" className="h-full w-full object-cover" /> : null}
               </div>
-              {d._id && (
-                <button className="inline-flex items-center rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50" onClick={() => onRemoveDestination(d._id)}>
-                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Remove
-                </button>
-              )}
+              <div className="min-w-0">
+                <div className="truncate font-medium text-neutral-900">{t.name}</div>
+                <div className="text-xs text-neutral-600">{t.location?.city || ''}{t.location?.city && t.location?.country ? ', ' : ''}{t.location?.country || ''}</div>
+                <div className="text-xs text-neutral-500">
+                  {(t.startDate ? new Date(t.startDate).toLocaleDateString() : '')}
+                  {t.startDate && t.endDate ? ' — ' : ''}
+                  {(t.endDate ? new Date(t.endDate).toLocaleDateString() : '')}
+                  {t.status ? ` · ${t.status}` : ''}
+                </div>
+              </div>
             </div>
           ))}
-        </div>
-        <div className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 p-3">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <input className="rounded-md border-none bg-white px-3 py-2 text-sm text-neutral-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-blue-500" placeholder="Name" value={newDest.name} onChange={(e) => setNewDest({ ...newDest, name: e.target.value })} />
-            <input className="rounded-md border-none bg-white px-3 py-2 text-sm text-neutral-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-blue-500" placeholder="City" value={newDest.city} onChange={(e) => setNewDest({ ...newDest, city: e.target.value })} />
-            <input className="rounded-md border-none bg-white px-3 py-2 text-sm text-neutral-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-blue-500" placeholder="Country" value={newDest.country} onChange={(e) => setNewDest({ ...newDest, country: e.target.value })} />
-          </div>
-          <textarea className="mt-2 w-full rounded-md border-none bg-white px-3 py-2 text-sm text-neutral-900 ring-1 ring-neutral-200 focus:ring-2 focus:ring-blue-500" placeholder="Notes (optional)" value={newDest.notes} onChange={(e) => setNewDest({ ...newDest, notes: e.target.value })} />
-          <button type="button" onClick={onAddDestination} disabled={addingDest || !newDest.name || !newDest.city || !newDest.country} className="mt-2 inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60">
-            <Plus className="mr-1 h-3.5 w-3.5" /> {addingDest ? 'Adding…' : 'Add Destination'}
-          </button>
         </div>
       </div>
 

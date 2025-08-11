@@ -20,6 +20,14 @@ router.post('/', protect, async (req, res) => {
       location
     } = req.body;
 
+    // Basic required field validation
+    if (!name || !startDate || !endDate || !location || !location.city || !location.country || !budget || typeof budget.amount !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, startDate, endDate, location.city, location.country, budget.amount'
+      });
+    }
+
     // Create new trip
     const trip = new Trip({
       name,

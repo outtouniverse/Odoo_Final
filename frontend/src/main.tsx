@@ -10,6 +10,7 @@ import NewTrip from './pages/NewTrip.tsx'
 import TripPlan from './pages/TripPlan.tsx'
 import ItineraryBento from './pages/ItineraryBento.tsx'
 import { TripProvider } from './utils/TripContext.tsx'
+import Trips from './pages/Trips.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<ProfileSettings />} />
           <Route path="/new-trip" element={<NewTrip />} />
+          <Route path="/trips" element={<Trips />} />
           <Route path="/trip-plan" element={<TripPlan />} />
           <Route path="/itinerary" element={<ItineraryBento />} />
         </Routes>
