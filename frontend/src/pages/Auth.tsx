@@ -31,6 +31,17 @@ export default function Auth() {
   function validateEmail(email: string) {
     return /.+@.+\..+/.test(email)
   }
+  function validateStrongPassword(pw: string) {
+    return pw.length >= 8 && /[A-Za-z]/.test(pw) && /\d/.test(pw)
+  }
+
+  const loginEmailError = loginEmail ? (validateEmail(loginEmail) ? null : 'Enter a valid email address.') : null
+  const loginPasswordError = loginPassword ? (validateStrongPassword(loginPassword) ? null : 'Password must be at least 8 characters and include a number.') : null
+
+  const regNameSan = regName.replace(/\s+/g, ' ').trim()
+  const regNameError = regName ? (regNameSan.length >= 2 ? null : 'Please enter your full name (min 2 characters).') : null
+  const regEmailError = regEmail ? (validateEmail(regEmail) ? null : 'Enter a valid email address.') : null
+  const regPasswordError = regPassword ? (validateStrongPassword(regPassword) ? null : 'Password must be at least 8 characters and include a number.') : null
 
   async function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -40,8 +51,8 @@ export default function Auth() {
       setError('Enter a valid email address.')
       return
     }
-    if (loginPassword.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (!validateStrongPassword(loginPassword)) {
+      setError('Password must be at least 8 characters and include a number.')
       return
     }
     try {
@@ -70,22 +81,22 @@ export default function Auth() {
     e.preventDefault()
     setMessage(null)
     setError(null)
-    if (regName.trim().length < 2) {
-      setError('Please enter your full name.')
+    if (regNameSan.length < 2) {
+      setError('Please enter your full name (min 2 characters).')
       return
     }
     if (!validateEmail(regEmail)) {
       setError('Enter a valid email address.')
       return
     }
-    if (regPassword.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (!validateStrongPassword(regPassword)) {
+      setError('Password must be at least 8 characters and include a number.')
       return
     }
     try {
       const res = await apiFetch('/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword })
+        body: JSON.stringify({ name: regNameSan, email: regEmail, password: regPassword })
       })
       const accessToken: string | undefined = res?.data?.accessToken
       const user = res?.data?.user
@@ -123,6 +134,9 @@ export default function Auth() {
     }
   }
 
+  const canLogin = validateEmail(loginEmail) && validateStrongPassword(loginPassword)
+  const canRegister = regNameSan.length >= 2 && validateEmail(regEmail) && validateStrongPassword(regPassword)
+
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 antialiased">
       {/* Header */}
@@ -147,7 +161,7 @@ export default function Auth() {
             <div className="grid grid-cols-2 text-sm font-medium text-neutral-700">
               <button
                 type="button"
-                onClick={() => { setMode('login'); setShowForgotInline(false); }}
+                onClick={() => { setMode('login'); setShowForgotInline(false); setError(null); setMessage(null); }}
                 className={`rounded-full px-3 py-2 transition ${mode === 'login' ? 'bg-teal-600 text-white shadow-sm' : 'hover:bg-neutral-50'}`}
                 aria-pressed={mode === 'login'}
               >
@@ -155,7 +169,7 @@ export default function Auth() {
               </button>
               <button
                 type="button"
-                onClick={() => { setMode('register'); setShowForgotInline(false); }}
+                onClick={() => { setMode('register'); setShowForgotInline(false); setError(null); setMessage(null); }}
                 className={`rounded-full px-3 py-2 transition ${mode === 'register' ? 'bg-teal-600 text-white shadow-sm' : 'hover:bg-neutral-50'}`}
                 aria-pressed={mode === 'register'}
               >
@@ -193,9 +207,11 @@ export default function Auth() {
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-200 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-teal-500"
+                    aria-invalid={!!loginEmailError}
+                    className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${loginEmailError ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-teal-500'}`}
                     placeholder="you@example.com"
                   />
+                  {loginEmailError && <p className="mt-1 text-xs text-red-600">{loginEmailError}</p>}
                 </div>
                 <div>
                   <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-neutral-800">Password</label>
@@ -206,7 +222,8 @@ export default function Auth() {
                       required
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-200 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-teal-500"
+                      aria-invalid={!!loginPasswordError}
+                      className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${loginPasswordError ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-teal-500'}`}
                       placeholder="••••••••"
                     />
                     <button
@@ -218,6 +235,7 @@ export default function Auth() {
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
                   </div>
+                  {loginPasswordError && <p className="mt-1 text-xs text-red-600">{loginPasswordError}</p>}
                 </div>
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-2">
@@ -227,7 +245,7 @@ export default function Auth() {
                   <button type="button" onClick={() => setShowForgotInline(true)} className="text-xs text-neutral-700 hover:text-neutral-900">Forgot password?</button>
                 </div>
                 <div className="pt-2">
-                  <button type="submit" className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Sign In</button>
+                  <button type="submit" disabled={!canLogin} className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-60">Sign In</button>
                 </div>
                 <p className="text-center text-xs text-neutral-600">
                   New here?{' '}
@@ -246,9 +264,11 @@ export default function Auth() {
                     required
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
-                    className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-200 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-teal-500"
+                    aria-invalid={!!regNameError}
+                    className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${regNameError ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-teal-500'}`}
                     placeholder="Alex Traveler"
                   />
+                  {regNameError && <p className="mt-1 text-xs text-red-600">{regNameError}</p>}
                 </div>
                 <div>
                   <label htmlFor="reg-email" className="mb-1 block text-sm font-medium text-neutral-800">Email</label>
@@ -258,9 +278,11 @@ export default function Auth() {
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-200 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-teal-500"
+                    aria-invalid={!!regEmailError}
+                    className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${regEmailError ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-teal-500'}`}
                     placeholder="you@example.com"
                   />
+                  {regEmailError && <p className="mt-1 text-xs text-red-600">{regEmailError}</p>}
                 </div>
                 <div>
                   <label htmlFor="reg-password" className="mb-1 block text-sm font-medium text-neutral-800">Password</label>
@@ -270,12 +292,14 @@ export default function Auth() {
                     required
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full rounded-md border-none bg-neutral-50 px-3 py-2 text-sm text-neutral-900 ring-1 ring-inset ring-neutral-200 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-teal-500"
+                    aria-invalid={!!regPasswordError}
+                    className={`w-full rounded-md border-none px-3 py-2 text-sm ring-1 ring-inset transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 ${regPasswordError ? 'bg-red-50 text-red-900 ring-red-300 focus:ring-red-500' : 'bg-neutral-50 text-neutral-900 ring-neutral-200 focus:ring-teal-500'}`}
                     placeholder="Create a password"
                   />
+                  {regPasswordError && <p className="mt-1 text-xs text-red-600">{regPasswordError}</p>}
                 </div>
                 <div className="pt-2">
-                  <button type="submit" className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">Create Account</button>
+                  <button type="submit" disabled={!canRegister} className="inline-flex w-full items-center justify-center rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-60">Create Account</button>
                 </div>
                 <p className="text-center text-xs text-neutral-600">
                   Already have an account?{' '}

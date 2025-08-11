@@ -12,25 +12,32 @@ const router = express.Router();
 const validateSignup = [
   body('name')
     .trim()
+    .customSanitizer((v) => String(v || '').replace(/\s+/g, ' ').trim())
     .isLength({ min: 2, max: 50 })
-    .withMessage('Name must be between 2 and 50 characters'),
+    .withMessage('Name must be between 2 and 50 characters')
+    .matches(/^[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+$/)
+    .withMessage('Name contains invalid characters'),
   body('email')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
+    .withMessage('Please provide a valid email')
+    .normalizeEmail(),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/[A-Za-z]/)
+    .withMessage('Password must contain at least one letter')
+    .matches(/\d/)
+    .withMessage('Password must contain at least one number')
 ];
 
 const validateLogin = [
   body('email')
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
+    .withMessage('Please provide a valid email')
+    .normalizeEmail(),
   body('password')
-    .notEmpty()
-    .withMessage('Password is required')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
 ];
 
 const validateForgotPassword = [

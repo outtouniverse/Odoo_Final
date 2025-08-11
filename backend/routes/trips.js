@@ -21,36 +21,72 @@ router.post('/', protect, async (req, res) => {
     } = req.body;
 
     // Basic required field validation
-    if (!name || !startDate || !endDate || !location || !location.city || !location.country || !budget || typeof budget.amount !== 'number') {
+    if (!name || !description || !startDate || !endDate || !location || !location.city || !location.country || !budget || typeof budget.amount !== 'number') {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: name, startDate, endDate, location.city, location.country, budget.amount'
+        message: 'Missing required fields: name, description, startDate, endDate, location.city, location.country, budget.amount'
       });
+    }
+
+    // Sanitize and normalize inputs
+    const nameTrimmed = String(name).trim();
+    const descTrimmed = String(description).trim();
+    const cityTrimmed = String(location.city).trim();
+    const countryTrimmed = String(location.country).trim();
+    const tagsNormalized = Array.isArray(tags)
+      ? tags.filter((t) => typeof t === 'string').map((t) => t.trim()).filter(Boolean).slice(0, 20)
+      : [];
+    const currency = budget.currency && typeof budget.currency === 'string'
+      ? budget.currency.toUpperCase().slice(0, 3)
+      : 'USD';
+    const amount = Number(budget.amount);
+
+    if (nameTrimmed.length < 3 || nameTrimmed.length > 120) {
+      return res.status(400).json({ success: false, message: 'Trip name must be between 3 and 120 characters' });
+    }
+    if (descTrimmed.length < 10 || descTrimmed.length > 2000) {
+      return res.status(400).json({ success: false, message: 'Description must be between 10 and 2000 characters' });
+    }
+    if (!cityTrimmed || !countryTrimmed) {
+      return res.status(400).json({ success: false, message: 'City and country are required' });
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Budget amount must be a positive number' });
+    }
+    if (!/^[A-Z]{3}$/.test(currency)) {
+      return res.status(400).json({ success: false, message: 'Budget currency must be a 3-letter code (e.g., USD)' });
+    }
+
+    // Validate dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid startDate or endDate' });
     }
 
     // Create new trip
     const trip = new Trip({
-      name,
-      description,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      coverPhoto: coverPhoto || '',
-      isPublic: isPublic || false,
-      tags: tags || [],
-      budget: budget || {},
-      location: location || {},
+      name: nameTrimmed,
+      description: descTrimmed,
+      startDate: start,
+      endDate: end,
+      coverPhoto: typeof coverPhoto === 'string' ? coverPhoto.trim() : '',
+      isPublic: !!isPublic,
+      tags: tagsNormalized,
+      budget: { amount, currency },
+      location: { city: cityTrimmed, country: countryTrimmed },
       user: req.user.id
     });
 
     // Validate dates
-    if (new Date(startDate) >= new Date(endDate)) {
+    if (start >= end) {
       return res.status(400).json({
         success: false,
         message: 'End date must be after start date'
       });
     }
 
-    if (new Date(startDate) < new Date()) {
+    if (start < new Date()) {
       return res.status(400).json({
         success: false,
         message: 'Start date must be in the future'
@@ -92,11 +128,19 @@ router.post('/', protect, async (req, res) => {
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    let { page = 1, limit = 10, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    // Normalize and validate query params
+    page = parseInt(page, 10);
+    limit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+    const allowedSortBy = ['createdAt', 'startDate', 'endDate', 'name', 'status'];
+    if (!allowedSortBy.includes(String(sortBy))) sortBy = 'createdAt';
+    sortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
     
     // Build query
     const query = { user: req.user.id };
-    if (status) query.status = status;
+    if (status && ['planning', 'active', 'completed', 'cancelled'].includes(String(status))) {
+      query.status = status;
+    }
     
     // Build sort object
     const sort = {};
@@ -276,15 +320,45 @@ router.put('/:id', protect, async (req, res) => {
     } = req.body;
     
     // Update fields
-    if (name !== undefined) trip.name = name;
-    if (description !== undefined) trip.description = description;
-    if (startDate !== undefined) trip.startDate = new Date(startDate);
-    if (endDate !== undefined) trip.endDate = new Date(endDate);
-    if (coverPhoto !== undefined) trip.coverPhoto = coverPhoto;
-    if (isPublic !== undefined) trip.isPublic = isPublic;
-    if (tags !== undefined) trip.tags = tags;
-    if (budget !== undefined) trip.budget = budget;
-    if (location !== undefined) trip.location = location;
+    if (name !== undefined) {
+      const n = String(name).trim();
+      if (n.length < 3 || n.length > 120) return res.status(400).json({ success: false, message: 'Trip name must be between 3 and 120 characters' });
+      trip.name = n;
+    }
+    if (description !== undefined) {
+      const d = String(description).trim();
+      if (d.length < 10 || d.length > 2000) return res.status(400).json({ success: false, message: 'Description must be between 10 and 2000 characters' });
+      trip.description = d;
+    }
+    if (startDate !== undefined) {
+      const s = new Date(startDate);
+      if (Number.isNaN(s.getTime())) return res.status(400).json({ success: false, message: 'Invalid startDate' });
+      trip.startDate = s;
+    }
+    if (endDate !== undefined) {
+      const e = new Date(endDate);
+      if (Number.isNaN(e.getTime())) return res.status(400).json({ success: false, message: 'Invalid endDate' });
+      trip.endDate = e;
+    }
+    if (coverPhoto !== undefined) trip.coverPhoto = String(coverPhoto || '').trim();
+    if (isPublic !== undefined) trip.isPublic = !!isPublic;
+    if (tags !== undefined) {
+      const tn = Array.isArray(tags) ? tags.filter((t) => typeof t === 'string').map((t) => t.trim()).filter(Boolean).slice(0, 20) : [];
+      trip.tags = tn;
+    }
+    if (budget !== undefined) {
+      const amount = Number(budget.amount);
+      const currency = (budget.currency || 'USD').toString().toUpperCase().slice(0, 3);
+      if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ success: false, message: 'Budget amount must be a positive number' });
+      if (!/^[A-Z]{3}$/.test(currency)) return res.status(400).json({ success: false, message: 'Budget currency must be a 3-letter code (e.g., USD)' });
+      trip.budget = { amount, currency };
+    }
+    if (location !== undefined) {
+      const city = String(location.city || '').trim();
+      const country = String(location.country || '').trim();
+      if (!city || !country) return res.status(400).json({ success: false, message: 'City and country are required' });
+      trip.location = { city, country };
+    }
     if (status !== undefined) trip.status = status;
     
     // Validate dates if they were updated
