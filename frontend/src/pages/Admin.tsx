@@ -84,7 +84,8 @@ export default function Admin() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Guard: require auth and super_admin role only
+
+    // Guard: require auth and admin role
     const allowed = isAuthenticated && hasRole('super_admin')
 
     // Redirect if not allowed (avoid setState in render)

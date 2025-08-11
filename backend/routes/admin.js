@@ -539,6 +539,38 @@ router.get('/analytics/popular',
   }
 );
 
+// Overview aggregate for admin dashboard
+router.get('/overview',
+  protect,
+  restrictTo('admin'),
+  async (req, res) => {
+    try {
+      const [totalUsers, totalTrips, topCities, recentUsers, recentTrips] = await Promise.all([
+        User.countDocuments(),
+        Trip.countDocuments(),
+        City.find().sort({ popularity: -1 }).limit(5),
+        User.find().sort({ createdAt: -1 }).limit(10),
+        Trip.find().populate('user', 'name email').sort({ createdAt: -1 }).limit(10)
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          totals: { users: totalUsers, trips: totalTrips },
+          popularDestinations: topCities,
+          recent: {
+            users: recentUsers.map(u => u.fullProfile),
+            trips: recentTrips
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching admin overview:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch overview' });
+    }
+  }
+);
+
 // Settings (in-memory stub; replace with persistent store)
 let SETTINGS = { maintenance: false };
 

@@ -12,6 +12,7 @@ const passport = require('passport');
 // Import configurations
 const connectDB = require('./config/database');
 require('./config/passport');
+const User = require('./models/User');
 
 // Import routes
 const indexRouter = require('./routes/index');
@@ -28,7 +29,31 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 // Connect to MongoDB
-connectDB();
+connectDB().then(async () => {
+  // Optional admin bootstrap from environment
+  try {
+    const email = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+    const password = process.env.ADMIN_PASSWORD || '';
+    const name = process.env.ADMIN_NAME || 'Administrator';
+    const shouldReset = String(process.env.ADMIN_RESET || '').toLowerCase() === 'true';
+    if (email && password) {
+      let admin = await User.findOne({ email }).select('+password');
+      if (!admin) {
+        admin = new User({ name, email, password, role: 'admin', isActive: true });
+        await admin.save();
+        console.log(`✅ Admin created: ${email}`);
+      } else {
+        let changed = false;
+        if (admin.role !== 'admin') { admin.role = 'admin'; changed = true; }
+        if (admin.isActive !== true) { admin.isActive = true; changed = true; }
+        if (shouldReset) { admin.password = password; changed = true; }
+        if (changed) { await admin.save(); console.log(`🔐 Admin updated: ${email}`); }
+      }
+    }
+  } catch (e) {
+    console.error('Admin bootstrap failed:', e.message);
+  }
+});
 
 // Security middleware
 app.use(helmet());
