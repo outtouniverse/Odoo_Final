@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from './router'
 
 type HeaderProps = {
     onMenuClick?: () => void
@@ -20,7 +21,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"><path strokeWidth="1.5" strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                     </button>
                     <div className="flex items-center gap-6">
-                        <a href="#" className="text-base font-semibold tracking-tight text-neutral-900">GlobeTrotter</a>
+                        <Link to="/" className="text-base font-semibold tracking-tight text-neutral-900">GlobeTrotter</Link>
                     </div>
 
                     <div className="mx-4 hidden flex-1 items-center lg:flex">
@@ -51,8 +52,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
                             </button>
                             {open && (
                                 <div role="menu" className="absolute right-0 mt-2 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md">
-                                    <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Profile</button>
-                                    <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Settings</button>
+                                    <Link to="/profile" className="block px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Profile</Link>
+                                    <Link to="/profile" className="block px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Settings</Link>
                                     <button className="block w-full px-3 py-2 text-left text-sm text-neutral-800 hover:bg-neutral-50" onClick={() => setOpen(false)}>Logout</button>
                                 </div>
                             )}

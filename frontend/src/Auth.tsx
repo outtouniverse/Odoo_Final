@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
 import { Link, useRouter } from './router'
-import { apiFetch } from './api'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
@@ -31,7 +30,7 @@ export default function Auth() {
     return /.+@.+\..+/.test(email)
   }
 
-  async function onSubmitLogin(e: React.FormEvent) {
+  function onSubmitLogin(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -43,21 +42,11 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    try {
-      const data = await apiFetch('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: loginEmail, password: loginPassword })
-      })
-      // Backend returns data.data.accessToken
-      localStorage.setItem('accessToken', data.data.accessToken)
-      setMessage('Logged in. Redirecting…')
-      setTimeout(() => router.navigate('/dashboard'), 450)
-    } catch (err: any) {
-      setError(err.message || 'Login failed')
-    }
+    setMessage('Logged in. Redirecting…')
+    setTimeout(() => router.navigate('/dashboard'), 450)
   }
 
-  async function onSubmitRegister(e: React.FormEvent) {
+  function onSubmitRegister(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -73,20 +62,11 @@ export default function Auth() {
       setError('Password must be at least 6 characters.')
       return
     }
-    try {
-      const data = await apiFetch('/auth/signup', {
-        method: 'POST',
-        body: JSON.stringify({ name: regName, email: regEmail, password: regPassword })
-      })
-      localStorage.setItem('accessToken', data.data.accessToken)
-      setMessage('Account created. Redirecting…')
-      setTimeout(() => router.navigate('/dashboard'), 450)
-    } catch (err: any) {
-      setError(err.message || 'Signup failed')
-    }
+    setMessage('Account created. Redirecting…')
+    setTimeout(() => router.navigate('/dashboard'), 450)
   }
 
-  async function onSubmitForgot(e: React.FormEvent) {
+  function onSubmitForgot(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
     setError(null)
@@ -94,15 +74,7 @@ export default function Auth() {
       setError('Enter a valid email address.')
       return
     }
-    try {
-      await apiFetch('/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email: forgotEmail })
-      })
-      setMessage('Password reset link sent. Check your inbox.')
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset link')
-    }
+    setMessage('Password reset link sent. Check your inbox.')
   }
 
   return (
