@@ -1,69 +1,98 @@
-# React + TypeScript + Vite
+# Travel Planner Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend for the Travel Planner application, a comprehensive tool to help users plan their trips, manage itineraries, and discover new destinations and activities.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+*   **Authentication**: Secure user sign-up and login.
+*   **Dashboard**: A personalized dashboard to view and manage your trips.
+*   **Trip Management**: Create new trips, view existing ones, and see them on a calendar.
+*   **Itinerary Planning**: A modern, bento-style layout to organize your trip details.
+*   **Activity & City Search**: Find activities and search for cities to add to your trip.
+*   **Budgeting**: Keep track of your trip expenses with a dedicated budget planner.
+*   **Public Itineraries**: Share and view trip itineraries.
+*   **Admin Panel**: An admin-only section to monitor application KPIs.
+*   **Profile Settings**: Manage your account and preferences.
 
-## Expanding the ESLint configuration
+## 🚀 Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+Make sure you have [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/) installed.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+1.  Clone the repository:
+    ```sh
+    git clone <your-repository-url>
+    ```
+2.  Navigate to the frontend directory:
+    ```sh
+    cd frontend
+    ```
+3.  Install NPM packages:
+    ```sh
+    npm install
+    ```
+
+### Running the Application
+
+To start the development server, run the following command:
+
+```sh
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The application will be available at `http://localhost:5173` (or another port if 5173 is in use).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🛠️ Tech Stack
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+*   **[React](https://reactjs.org/)**: A JavaScript library for building user interfaces.
+*   **[Vite](https://vitejs.dev/)**: A fast frontend build tool.
+*   **[TypeScript](https://www.typescriptlang.org/)**: A typed superset of JavaScript.
+*   **[Tailwind CSS](https://tailwindcss.com/)**: A utility-first CSS framework.
+*   **[Lucide React](https://lucide.dev/)**: A library for simply beautiful icons.
+
+## 📜 Available Scripts
+
+In the project directory, you can run:
+
+*   `npm run dev`: Runs the app in development mode.
+*   `npm run build`: Builds the app for production.
+*   `npm run lint`: Lints the source code using ESLint.
+*   `npm run preview`: Serves the production build locally.
+
+## 📁 Project Structure
+frontend/
+├── public/
+│ └── vite.svg
+├── src/
+│ ├── assets/
+│ ├── components/
+│ │ ├── admin/
+│ │ ├── bento/
+│ │ └── ...
+│ ├── pages/
+│ │ ├── Admin.tsx
+│ │ ├── Auth.tsx
+│ │ ├── Dashboard.tsx
+│ │ └── ...
+│ ├── utils/
+│ │ ├── api.ts
+│ │ └── auth.tsx
+│ ├── App.tsx
+│ ├── main.tsx
+│ └── index.css
+├── package.json
+└── README.md
+
+
+*   **`public/`**: Contains static assets that are directly served.
+*   **`src/`**: Contains the main source code of the application.
+    *   **`components/`**: Reusable UI components.
+    *   **`pages/`**: Components that represent the application's pages.
+    *   **`utils/`**: Utility functions and custom hooks.
+    *   **`App.tsx`**: The main application component where routing is handled.
+    *   **`main.tsx`**: The entry point of the React application.
