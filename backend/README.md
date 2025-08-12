@@ -1,12 +1,4 @@
-# Backend Authentication System
-
-Team Number: 185
-Team Leader: Tulip Jani
-P.S: Ps -2 GLOBETROTTER 
-
-
-
-
+# BACKEND SYSTEM
 
 A complete authentication system with Express.js, MongoDB, JWT, and Google OAuth.
 
