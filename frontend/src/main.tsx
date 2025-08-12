@@ -27,7 +27,6 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <TripProvider>
         <RouterProvider>
-          <MyTripCart />
           <ToastContainer />
           <Routes>
             <Route path="/" element={<App />} />
@@ -39,13 +38,28 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/itinerary" element={<ItineraryBento />} />
             <Route path="/cities" element={
               <ProtectedRoute>
-                <CitySearch />
+                <>
+                  <CitySearch />
+                  <MyTripCart />
+                </>
               </ProtectedRoute>
             } />
-            <Route path="/activities" element={<ActivitySearch />} />
-            <Route path="/budget" element={<TripBudget />} />
-            <Route path="/calendar" element={<TripCalendar />} />
-            <Route path="/public-itinerary" element={<PublicItinerary />} />
+            <Route path="/activities" element={<>
+              <ActivitySearch />
+              <MyTripCart />
+            </>} />
+            <Route path="/budget" element={<>
+              <TripBudget />
+              <MyTripCart />
+            </>} />
+            <Route path="/calendar" element={<>
+              <TripCalendar />
+              <MyTripCart />
+            </>} />
+            <Route path="/public-itinerary" element={<>
+              <PublicItinerary />
+              <MyTripCart />
+            </>} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/trips" element={<Trips />} />
           </Routes>

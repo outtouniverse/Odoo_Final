@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, X, Star, Plus, Check, Clock, DollarSign } from 'lucide-react'
+import { Search, X, Plus, Check, Star, Clock, DollarSign } from 'lucide-react'
+import { useRouter } from '../utils/router'
 import { useTrip } from '../utils/TripContext'
+import { useAuth } from '../utils/auth'
+import { useToast } from '../components/Toast'
 
 type Activity = {
   id: string
@@ -137,7 +140,10 @@ async function pickBestImageForActivity(activity: Activity, city: string): Promi
 }
 
 export default function ActivitySearch() {
-  const { addActivity } = useTrip()
+  const { saveActivityToDatabase } = useTrip()
+  const { isAuthenticated } = useAuth()
+  const { success: showSuccess, error: showError } = useToast()
+  const { navigate } = useRouter()
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [category, setCategory] = useState<Activity['category'] | 'All'>('All')
@@ -147,9 +153,21 @@ export default function ActivitySearch() {
   const [page, setPage] = useState(1)
   const pageSize = 8
   const [modalId, setModalId] = useState<string | null>(null)
-  const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES)
+  const [activities, setActivities] = useState<Activity[]>([])
+  
+  // Debug: Log activities whenever they change
+  useEffect(() => {
+    console.log('🔍 Activities state updated:', activities.map(a => ({ id: a.id, name: a.name, city: a.city, category: a.category })));
+  }, [activities])
+  
+  // Store city and country information for use in activities
+  const [cityInfo, setCityInfo] = useState<{ city: string; country: string }>({ city: '', country: '' })
+  
   const [loadingAI, setLoadingAI] = useState(false)
   const [loadingImages, setLoadingImages] = useState(false)
+  const [savingActivity, setSavingActivity] = useState<string | null>(null)
+
+  const isLoading = loadingAI || loadingImages
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim().toLowerCase()), 300)
@@ -169,10 +187,86 @@ export default function ActivitySearch() {
   useEffect(() => { setPage(1) }, [debounced, category, cost, duration])
   const pageItems = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page])
 
-  function toggle(id: string) {
+  async function toggle(id: string) {
+    if (!isAuthenticated) {
+      showError('Please log in to add activities to your trip')
+      setTimeout(() => navigate('/login'), 2000)
+      return
+    }
+
     setAdded(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+        showSuccess('Activity removed from trip! 🗑️')
+      } else {
+        next.add(id)
+        const activity = activities.find(a => a.id === id)
+        if (activity) {
+          console.log('🔍 Activity to save:', activity);
+          
+          // Validate activity data before saving
+          if (!activity.city || activity.city.trim().length === 0) {
+            console.error('❌ Activity city is empty:', activity);
+            showError('Activity city is missing. Please try again.');
+            return next; // Return the current state instead of undefined
+          }
+          
+          if (!activity.category) {
+            console.error('❌ Activity category is missing:', activity);
+            showError('Activity category is missing. Please try again.');
+            return next; // Return the current state instead of undefined
+          }
+          
+          // Additional validation to ensure city name is not a default value
+          if (activity.city === 'Unknown' || activity.city === 'Unknown City') {
+            console.error('❌ Activity city is using default value:', activity);
+            showError('City information is not available. Please try again.');
+            return next;
+          }
+          
+          // Save to database using the simplified approach
+          setSavingActivity(id)
+          
+          // Construct the city string with country if available
+          const cityWithCountry = `${activity.city}${cityInfo.country && cityInfo.country !== 'Unknown' ? `, ${cityInfo.country}` : ''}`;
+          console.log('🔍 City with country for saving:', { 
+            originalCity: activity.city, 
+            country: cityInfo.country, 
+            cityWithCountry 
+          });
+          
+          // Use a dummy tripId and cityId since the new endpoint doesn't need them
+          saveActivityToDatabase(
+            'dummy-trip-id',
+            'dummy-city-id',
+            {
+              id: activity.id,
+              name: activity.name,
+              city: cityWithCountry,
+              category: activity.category, // Include the category field
+              img: activity.img,
+              duration: activity.duration,
+              rating: activity.rating,
+              cost: activity.cost // Keep the original string format (High, Medium, Low)
+            }
+          ).then(() => {
+            showSuccess(`Added ${activity.name} to your trip! ✨`)
+            setSavingActivity(null)
+          }).catch((err: any) => {
+            console.error('Error saving activity to database:', err)
+            // If already exists on server, treat as success and keep added state
+            if (err?.status === 409 || String(err?.message || '').includes('Activity already exists')) {
+              showSuccess('This activity is already in your trip ✅')
+              setSavingActivity(null)
+              return next
+            }
+            showError(err.message || 'Failed to save activity to database. Please try again.')
+            next.delete(id) // Remove from added if save failed
+            setSavingActivity(null)
+          })
+        }
+      }
       return next
     })
   }
@@ -184,8 +278,33 @@ export default function ActivitySearch() {
     const params = new URLSearchParams(window.location.search)
     const city = params.get('city') || ''
     const country = params.get('country') || ''
-    if (!city) return
-    const key = "AIzaSyBYkv9KPhVmX4Ro6VHGEh_tmepFKBj7uWo"
+    
+    console.log('🔍 URL parameters:', { city, country, hasCity: !!city, cityType: typeof city, cityLength: city?.length });
+    
+    if (!city || city.trim().length === 0) {
+      console.warn('⚠️ No city parameter found in URL, using fallback activities');
+      // Set some default activities if no city is provided
+      console.log('🔍 Setting default MOCK_ACTIVITIES:', MOCK_ACTIVITIES.map(a => ({ id: a.id, name: a.name, city: a.city, category: a.category })));
+      setActivities(MOCK_ACTIVITIES);
+      return;
+    }
+    
+    // Validate city parameter
+    if (city.trim().length === 0) {
+      console.error('❌ City parameter is empty after trimming');
+      console.log('🔍 Setting default MOCK_ACTIVITIES due to empty city:', MOCK_ACTIVITIES.map(a => ({ id: a.id, name: a.name, city: a.city, category: a.category })));
+      setActivities(MOCK_ACTIVITIES);
+      return;
+    }
+    
+    // Store city name for use in activities
+    const cityName = city.trim()
+    const countryName = country ? country.trim() : 'Unknown'
+    
+    // Update cityInfo state for use in other functions
+    setCityInfo({ city: cityName, country: countryName })
+    console.log('🔍 Set cityInfo:', { city: cityName, country: countryName });
+    const key = "AIzaSyA0M0N6rF0Lk3cMLbafq0cfAzMGpRb525U"
     if (!key) return
     const prompt = `Return 12 JSON objects for engaging traveler activities in ${city}${country ? ', ' + country : ''}. Each object keys: id (short slug), name, city, category (Sightseeing|Food|Adventure|Culture|Nightlife), cost (Low|Medium|High), duration (1–3 hrs|Half-day|Full-day), rating (3.8-5.0), img (royalty-free URL), description (<=140 chars), tags (2-4 short tags). Only return a pure JSON array, no prose.`
     async function run() {
@@ -210,18 +329,29 @@ export default function ActivitySearch() {
         if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON array in response')
         const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1)) as Activity[]
         // Basic sanitize
-        const withDefaults = parsed.map((a, idx) => ({
-          id: a.id || `ai-${idx}-${(a.name || 'activity').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-          name: a.name?.slice(0, 60) || 'Activity',
-          city: city,
-          category: (['Sightseeing', 'Food', 'Adventure', 'Culture', 'Nightlife'] as const).includes(a.category as any) ? a.category : 'Sightseeing',
-          cost: (['Low', 'Medium', 'High'] as const).includes(a.cost as any) ? a.cost : 'Medium',
-          duration: (['1–3 hrs', 'Half-day', 'Full-day'] as const).includes(a.duration as any) ? a.duration : '1–3 hrs',
-          rating: Math.min(5, Math.max(3.8, Number(a.rating) || 4.5)),
-          img: a.img || `https://source.unsplash.com/1200x800/?${encodeURIComponent(city + ' activity')}`,
-          description: a.description?.slice(0, 160) || 'Great local activity.',
-          tags: Array.isArray(a.tags) && a.tags.length ? a.tags.slice(0, 4) : ['experience']
-        }))
+        const withDefaults = parsed.map((a, idx) => {
+          const activityWithDefaults = {
+            id: a.id || `ai-${idx}-${(a.name || 'activity').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+            name: a.name?.slice(0, 60) || 'Activity',
+            city: cityName, // Use the stored city name
+            category: (['Sightseeing', 'Food', 'Adventure', 'Culture', 'Nightlife'] as const).includes(a.category as any) ? a.category : 'Sightseeing',
+            cost: (['Low', 'Medium', 'High'] as const).includes(a.cost as any) ? a.cost : 'Medium',
+            duration: (['1–3 hrs', 'Half-day', 'Full-day'] as const).includes(a.duration as any) ? a.duration : '1–3 hrs',
+            rating: Math.min(5, Math.max(3.8, Number(a.rating) || 4.5)),
+            img: a.img || `https://source.unsplash.com/1200x800/?${encodeURIComponent(cityName + ' activity')}`,
+            description: a.description?.slice(0, 160) || 'Great local activity.',
+            tags: Array.isArray(a.tags) && a.tags.length ? a.tags.slice(0, 4) : ['experience']
+          };
+          
+          console.log(`🔍 Activity ${idx + 1} created:`, { 
+            city: activityWithDefaults.city, 
+            cityType: typeof activityWithDefaults.city,
+            cityLength: activityWithDefaults.city?.length,
+            category: activityWithDefaults.category
+          });
+          
+          return activityWithDefaults;
+        })
         // Improve images with robust probing & fallbacks
         setLoadingImages(true)
         const improved = await Promise.all(withDefaults.map(async (a) => {
@@ -229,16 +359,23 @@ export default function ActivitySearch() {
             const ok = await probeImage(a.img)
             if (ok) return a
           }
-          const picked = await pickBestImageForActivity(a, city)
-          return { ...a, img: picked }
+          const picked = await pickBestImageForActivity(a, cityName)
+          return { ...a, city: cityName, img: picked }
         }))
+        console.log('🔍 Setting AI-generated activities:', improved.map(a => ({ id: a.id, name: a.name, city: a.city, category: a.category })));
         setActivities(improved)
         setLoadingImages(false)
       } catch {
         // Fallback to mock filtered by city if provided
-        const params = new URLSearchParams(window.location.search)
-        const city = params.get('city') || ''
-        const base = city ? MOCK_ACTIVITIES.filter(a => a.city.toLowerCase() === city.toLowerCase()) : MOCK_ACTIVITIES
+        const base = cityName ? MOCK_ACTIVITIES.filter(a => a.city.toLowerCase() === cityName.toLowerCase()) : MOCK_ACTIVITIES
+        
+        console.log('🔍 Fallback activities:', { 
+          cityName, 
+          cityType: typeof cityName, 
+          cityLength: cityName?.length,
+          baseCount: base.length,
+          mockCount: MOCK_ACTIVITIES.length
+        });
         // Enhance fallback images as well
         setLoadingImages(true)
         const improved = await Promise.all(base.map(async (a) => {
@@ -246,9 +383,11 @@ export default function ActivitySearch() {
             const ok = await probeImage(a.img)
             if (ok) return a
           }
-          const picked = await pickBestImageForActivity(a, a.city)
-          return { ...a, img: picked }
+          const picked = await pickBestImageForActivity(a, cityName) // Use stored city name
+          // Ensure the city field is set correctly for fallback activities
+          return { ...a, city: cityName, img: picked }
         }))
+        console.log('🔍 Setting fallback activities:', improved.map(a => ({ id: a.id, name: a.name, city: a.city, category: a.category })));
         setActivities(improved)
         setLoadingImages(false)
       } finally {
@@ -269,9 +408,12 @@ export default function ActivitySearch() {
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search activities..." className="w-full rounded-lg border border-neutral-300 bg-white pl-9 pr-8 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-teal-600" />
               {query && <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:bg-neutral-100" aria-label="Clear"><X className="h-4 w-4" /></button>}
             </div>
-            {(loadingAI || loadingImages) && (
-              <div className="text-xs text-neutral-500">
-                {loadingAI ? 'Generating suggested activities...' : 'Enhancing images...'}
+            {isLoading && (
+              <div className="space-y-2">
+                <div className="h-1 w-full animate-pulse rounded-full bg-gradient-to-r from-teal-200 via-teal-400 to-teal-200" />
+                <div className="text-xs text-neutral-500">
+                  {loadingAI ? 'Generating suggested activities...' : 'Enhancing images...'}
+                </div>
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -299,46 +441,77 @@ export default function ActivitySearch() {
       </div>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {pageItems.map(a => (
-            <article key={a.id} className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
-              <div className="relative h-36">
-                <img src={a.img} alt={a.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs shadow">{a.city}</div>
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-semibold">{a.name}</h3>
-                <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{a.description}</p>
-                <div className="mt-2 flex items-center justify-between text-xs text-neutral-700">
-                  <span className="inline-flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" />{a.cost}</span>
-                  <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{a.duration}</span>
-                  <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 text-amber-400" />{a.rating}</span>
+        {/* Loading skeleton grid */}
+        {isLoading && activities.length === 0 && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: pageSize }).map((_, i) => (
+              <article key={`skeleton-${i}`} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                <div className="relative h-36 w-full overflow-hidden bg-neutral-100">
+                  <div className="h-full w-full animate-pulse bg-gradient-to-r from-neutral-200 via-neutral-300 to-neutral-200" />
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {a.tags.map(t => <span key={t} className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">#{t}</span>)}
+                <div className="p-4">
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-neutral-200" />
+                  <div className="mt-2 h-3 w-full animate-pulse rounded bg-neutral-100" />
+                  <div className="mt-1 h-3 w-5/6 animate-pulse rounded bg-neutral-100" />
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="h-9 animate-pulse rounded-lg bg-neutral-100" />
+                    <div className="h-9 animate-pulse rounded-lg bg-neutral-200" />
+                  </div>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button onClick={() => setModalId(a.id)} className="rounded-lg border border-neutral-300 px-3 py-2 text-xs hover:bg-neutral-50">Quick View</button>
-                  {added.has(a.id) ? (
-                    <button onClick={() => toggle(a.id)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"><Check className="h-4 w-4" />Added</button>
-                  ) : (
-                    <button onClick={() => {
-                      toggle(a.id)
-                      addActivity({ id: a.id, name: a.name, city: a.city, img: a.img, duration: a.duration, rating: a.rating, cost: a.cost === 'High' ? 3 : a.cost === 'Medium' ? 2 : 1 })
-                    }} className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-medium hover:bg-neutral-50"><Plus className="h-4 w-4" />Add</button>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-        <div className="mt-6 flex items-center justify-between text-sm text-neutral-600">
-          <span>Page {page} of {totalPages}</span>
-          <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="rounded-md border border-neutral-300 px-3 py-1 disabled:opacity-50">Prev</button>
-            <button disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="rounded-md border border-neutral-300 px-3 py-1 disabled:opacity-50">Next</button>
+              </article>
+            ))}
           </div>
-        </div>
+        )}
+
+        {/* Activities grid */}
+        {!isLoading && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pageItems.map(a => (
+              <article key={a.id} className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
+                <div className="relative h-36">
+                  <img src={a.img} alt={a.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs shadow">{a.city}</div>
+                </div>
+                <div className="p-4">
+                  <h3 className="text-sm font-semibold">{a.name}</h3>
+                  <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{a.description}</p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-neutral-700">
+                    <span className="inline-flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" />{a.cost}</span>
+                    <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{a.duration}</span>
+                    <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 text-amber-400" />{a.rating}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {a.tags.map(t => <span key={t} className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">#{t}</span>)}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button onClick={() => setModalId(a.id)} className="rounded-lg border border-neutral-300 px-3 py-2 text-xs hover:bg-neutral-50">Quick View</button>
+                    {savingActivity === a.id ? (
+                      <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-xs font-medium text-white hover:bg-teal-700"><Check className="h-4 w-4" />Saving...</button>
+                    ) : added.has(a.id) ? (
+                      <button onClick={() => toggle(a.id)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"><Check className="h-4 w-4" />Added</button>
+                    ) : (
+                      <button onClick={() => {
+                        // Only toggle which triggers saveActivityToDatabase; local state is updated on success
+                        toggle(a.id)
+                      }} className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-medium hover:bg-neutral-50"><Plus className="h-4 w-4" />Add</button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && (
+          <div className="mt-6 flex items-center justify-between text-sm text-neutral-600">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="rounded-md border border-neutral-300 px-3 py-1 disabled:opacity-50">Prev</button>
+              <button disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="rounded-md border border-neutral-300 px-3 py-1 disabled:opacity-50">Next</button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal */}

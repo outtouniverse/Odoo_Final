@@ -4,6 +4,361 @@ import KPICard from '../components/admin/KPICard'
 import { useAuth } from '../utils/auth'
 import { apiFetch } from '../utils/api'
 
+// Function to get relevant images for cities (same as Dashboard)
+function getCityImage(cityName: string, country: string, existingImage?: string): string {
+  // If we have an existing image, use it
+  if (existingImage && existingImage.trim()) {
+    return existingImage;
+  }
+
+  // Fallback to relevant stock images based on city/country
+  const cityLower = cityName.toLowerCase();
+  const countryLower = country.toLowerCase();
+  if (cityLower.includes('paris') || countryLower.includes('france')) {
+  
+      return 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop'; // France
+  
+    }
+  
+    if (cityLower.includes('tokyo') || countryLower.includes('japan')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // Japan
+  
+    }
+  
+    if (cityLower.includes('new york') || cityLower.includes('nyc') || countryLower.includes('united states') || countryLower.includes('usa')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop'; // USA
+  
+    }
+  
+    if (cityLower.includes('london') || countryLower.includes('united kingdom') || countryLower.includes('uk') || countryLower.includes('england')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop'; // UK
+  
+    }
+  
+    if (cityLower.includes('rome') || cityLower.includes('milan') || countryLower.includes('italy')) {
+  
+      return 'https://images.unsplash.com/photo-1509395176047-4a66953fd231?w=400&h=300&fit=crop'; // Italy
+  
+    }
+  
+    if (cityLower.includes('barcelona') || cityLower.includes('madrid') || countryLower.includes('spain')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop'; // Spain
+  
+    }
+  
+    if (cityLower.includes('amsterdam') || countryLower.includes('netherlands')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // Netherlands
+  
+    }
+  
+    if (cityLower.includes('berlin') || countryLower.includes('germany')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop'; // Germany
+  
+    }
+  
+    if (cityLower.includes('prague') || countryLower.includes('czech')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop'; // Czech Republic
+  
+    }
+  
+    if (cityLower.includes('vienna') || countryLower.includes('austria')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // Austria
+  
+    }
+  
+    if (cityLower.includes('budapest') || countryLower.includes('hungary')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop'; // Hungary
+  
+    }
+  
+    if (cityLower.includes('dubai') || countryLower.includes('united arab emirates') || countryLower.includes('uae')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // UAE
+  
+    }
+  
+    if (cityLower.includes('singapore') || countryLower.includes('singapore')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop'; // Singapore
+  
+    }
+  
+    if (cityLower.includes('bangkok') || countryLower.includes('thailand')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop'; // Thailand
+  
+    }
+  
+    if (cityLower.includes('sydney') || countryLower.includes('australia')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop'; // Australia
+  
+    }
+  
+    if (cityLower.includes('toronto') || cityLower.includes('vancouver') || countryLower.includes('canada')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop'; // Canada
+  
+    }
+  
+    if (cityLower.includes('rio') || cityLower.includes('sao paulo') || countryLower.includes('brazil')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // Brazil
+  
+    }
+  
+    if (cityLower.includes('mexico') || countryLower.includes('mexico')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop'; // Mexico
+  
+    }
+  
+    if (cityLower.includes('cairo') || countryLower.includes('egypt')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // Egypt
+  
+    }
+  
+    if (cityLower.includes('marrakech') || countryLower.includes('morocco')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop'; // Morocco
+  
+    }
+  
+    if (cityLower.includes('istanbul') || countryLower.includes('turkey')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop'; // Turkey
+  
+    }
+  
+    if (cityLower.includes('moscow') || countryLower.includes('russia')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop'; // Russia
+  
+    }
+  
+    if (cityLower.includes('beijing') || cityLower.includes('shanghai') || countryLower.includes('china')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop'; // China
+  
+    }
+  
+    if (cityLower.includes('seoul') || countryLower.includes('korea')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop'; // South Korea
+  
+    }
+  
+    if (cityLower.includes('mumbai') || cityLower.includes('delhi') || countryLower.includes('india')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop'; // India
+  
+    }
+  
+  
+  
+    // Generic fallbacks based on region
+  
+    if (countryLower.includes('france')) {
+  
+      return 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('japan')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('united states') || countryLower.includes('usa')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('united kingdom') || countryLower.includes('uk') || countryLower.includes('england')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('italy')) {
+  
+      return 'https://images.unsplash.com/photo-1509395176047-4a66953fd231?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('spain')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('netherlands')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('germany')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('czech')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('austria')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('hungary')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('united arab emirates') || countryLower.includes('uae')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('singapore')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('thailand')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('australia')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('canada')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('brazil')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('mexico')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('egypt')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('morocco')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('turkey')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('russia')) {
+  
+      return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('china')) {
+  
+      return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('korea')) {
+  
+      return 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('india')) {
+  
+      return 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?w=400&h=300&fit=crop';
+  
+    }
+  
+  
+  
+    // Generic fallbacks based on region
+  
+    if (countryLower.includes('europe')) {
+  
+      return 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('asia')) {
+  
+      return 'https://images.unsplash.com/photo-1548013146-724ded68c90d?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('africa')) {
+  
+      return 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('america') || countryLower.includes('caribbean')) {
+  
+      return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+  
+    }
+  
+    if (countryLower.includes('oceania') || countryLower.includes('pacific')) {
+  
+      return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop';
+  
+    }
+  
+  
+  
+    // Default beautiful travel image
+  
+    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+  
+  }
 type SectionKey = 'overview' | 'users' | 'trips' | 'library'
 
 const sections: { key: SectionKey; label: string }[] = [
@@ -45,7 +400,7 @@ interface Trip {
 }
 
 interface Destination {
-    _id: string
+    _id?: string
     name: string
     country: string
     region?: string
@@ -185,12 +540,63 @@ export default function Admin() {
         }
     }
 
+    // Fetch all destinations from admin perspective: aggregate from all trips, not just dashboard recs
     const fetchDestinations = async () => {
         try {
-            const response = await apiFetch('/admin/destinations')
-            if (response.success) {
-                setDestinations(response.data)
+            // Fetch all trips (admin scope)
+            const tripsRes = await apiFetch('/admin/trips')
+            let tripList: Trip[] = []
+            if (tripsRes.success && Array.isArray(tripsRes.data)) {
+                tripList = tripsRes.data
             }
+
+            // Aggregate unique destinations from all trips
+            const destMap = new Map<string, Destination>()
+            for (const trip of tripList) {
+                const key = `${trip.location.city}|${trip.location.country}`
+                if (!destMap.has(key)) {
+                    destMap.set(key, {
+                        name: trip.location.city,
+                        country: trip.location.country,
+                        costIndex: 50, // default, could be improved if you have more info
+                        popularity: 0,
+                        image: undefined,
+                        description: ''
+                    })
+                }
+                // Increment popularity for each trip occurrence
+                destMap.get(key)!.popularity += 1
+            }
+
+            // Optionally, fetch admin destinations for more info (costIndex, image, etc)
+            const adminDestRes = await apiFetch('/admin/destinations')
+            let adminDestList: Destination[] = []
+            if (adminDestRes.success && Array.isArray(adminDestRes.data)) {
+                adminDestList = adminDestRes.data
+            }
+
+            // Merge admin destinations info into aggregated destinations
+            for (const adminDest of adminDestList) {
+                // Try to match by city+country or name+country
+                const key = `${adminDest.name}|${adminDest.country}`
+                if (destMap.has(key)) {
+                    destMap.set(key, {
+                        ...destMap.get(key)!,
+                        ...adminDest,
+                        popularity: destMap.get(key)!.popularity // keep trip-based popularity
+                    })
+                } else {
+                    // If not in trips, add it with popularity 0
+                    destMap.set(key, {
+                        ...adminDest,
+                        popularity: 0
+                    })
+                }
+            }
+
+            // Convert to array and sort by popularity descending
+            const destArr = Array.from(destMap.values()).sort((a, b) => b.popularity - a.popularity)
+            setDestinations(destArr)
         } catch (err: any) {
             console.error('Failed to fetch destinations:', err)
             setError('Failed to fetch destinations. Please ensure backend is running.')
@@ -549,8 +955,8 @@ function OverviewSection({ analytics, budgetStats }: { analytics: Analytics, bud
                     <div className="h-64">
                         {budgetStats?.budgetByMonth?.length ? (
                             <div className="flex items-end justify-between h-full gap-2">
-                                {budgetStats.budgetByMonth.map((item, index) => {
-                                    const maxAmount = Math.max(...budgetStats.budgetByMonth.map(d => d.amount))
+                                {budgetStats.budgetByMonth.map((item: { month: string; amount: number }, index: number) => {
+                                    const maxAmount = Math.max(...budgetStats.budgetByMonth.map((d: { amount: number }) => d.amount))
                                     const height = (item.amount / maxAmount) * 100
                                     return (
                                         <div key={item.month} className="flex flex-col items-center flex-1">
@@ -580,24 +986,26 @@ function OverviewSection({ analytics, budgetStats }: { analytics: Analytics, bud
                 <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
                     <h3 className="text-lg font-bold text-neutral-900 mb-4">📈 Budget by Status</h3>
                     <div className="space-y-4">
-                        {budgetStats?.budgetByStatus?.map((item) => {
-                            const total = budgetStats.budgetByStatus.reduce((sum, d) => sum + d.amount, 0)
-                            const percentage = (item.amount / total) * 100
-                            return (
-                                <div key={item.status} className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="font-medium capitalize">{item.status}</span>
-                                        <span className="text-neutral-600">${item.amount.toLocaleString()}</span>
+                        {budgetStats?.budgetByStatus?.length ? (
+                            budgetStats.budgetByStatus.map((item: { status: string; amount: number }) => {
+                                const total = budgetStats.budgetByStatus.reduce((sum: number, d: { amount: number }) => sum + d.amount, 0)
+                                const percentage = (item.amount / total) * 100
+                                return (
+                                    <div key={item.status} className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-medium capitalize">{item.status}</span>
+                                            <span className="text-neutral-600">${item.amount.toLocaleString()}</span>
+                                        </div>
+                                        <div className="w-full bg-neutral-200 rounded-full h-2">
+                                            <div 
+                                                className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500"
+                                                style={{ width: `${percentage}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-neutral-200 rounded-full h-2">
-                                        <div 
-                                            className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500"
-                                            style={{ width: `${percentage}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            )
-                        }) || (
+                                )
+                            })
+                        ) : (
                             <div className="text-center text-neutral-500 py-8">
                                 No status data available
                             </div>
@@ -850,6 +1258,7 @@ function LibrarySection({
     onRefresh: () => void
     onDelete: (id: string) => void
 }) {
+    const { navigate } = useRouter()
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -873,39 +1282,56 @@ function LibrarySection({
                 </div>
             </div>
             
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {destinations.map((dest) => (
-                    <article key={dest._id} className="group rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex-1">
-                                <h4 className="text-lg font-bold text-neutral-900 mb-1">{dest.name}</h4>
-                                <p className="text-sm text-neutral-600 mb-2">📍 {dest.country}</p>
-                                <div className="flex items-center gap-4 text-sm">
-                                    <span className="flex items-center gap-1 text-orange-600">
-                                        <span>🔥</span>
-                                        <span className="font-medium">Popularity: {dest.popularity}</span>
-                                    </span>
-                                    <span className="flex items-center gap-1 text-green-600">
-                                        <span>💰</span>
-                                        <span className="font-medium">Cost: {dest.costIndex}</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => onDelete(dest._id)}
-                                className="opacity-0 group-hover:opacity-100 rounded-lg p-2 text-red-600 hover:bg-red-50 transition-all duration-200"
-                            >
-                                🗑️
-                            </button>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {destinations
+                  .filter(d => `${d.name} ${d.country}`.toLowerCase().includes(search.toLowerCase()))
+                  .map((d) => (
+                    <article key={d._id || `${d.name}-${d.country}`} className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
+                      <div className="relative h-36 w-full overflow-hidden">
+                        {(() => { 
+                          // Get relevant image for the destination
+                          const imageUrl = getCityImage(d.name, d.country, d.image);
+                          return (
+                            <img src={imageUrl} alt={d.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                          );
+                        })()}
+                        <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs shadow">
+                          {d.country}
                         </div>
-                        {dest.description && (
-                            <p className="text-sm text-neutral-600 line-clamp-2">{dest.description}</p>
-                        )}
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-sm font-semibold">{d.name}</h3>
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">{d.popularity ?? 0}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-xs text-neutral-600">
+                          <span>Cost Index: <span className="font-medium text-neutral-800">{d.costIndex ?? 0}</span></span>
+                          <span className="text-neutral-500">{d.region || d.country}</span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          {d._id ? (
+                            <button 
+                              aria-label="Delete"
+                              onClick={() => onDelete(d._id as string)}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          ) : (
+                            <div />
+                          )}
+                          <button 
+                            aria-label="View Activities"
+                            onClick={() => navigate(`/activities?city=${encodeURIComponent(d.name)}&country=${encodeURIComponent(d.country)}`)}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
+                          >
+                            View Activities
+                          </button>
+                        </div>
+                      </div>
                     </article>
                 ))}
             </div>
         </div>
     )
 }
-
-

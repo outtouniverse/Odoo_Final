@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Plus, Wand2 } from 'lucide-react'
-import { useTrip } from '../utils/TripContext'
+import { useTrip, type SelectedActivity } from '../utils/TripContext'
 import { useRouter } from '../utils/router'
 
 type Day = { id: string; date: string }
@@ -23,19 +23,49 @@ const INITIAL_ACTIVITIES: Activity[] = [
 ]
 
 export default function TripCalendar() {
-  const { selectedActivities } = useTrip()
+  const { selectedActivities, getLatestTrip, getTripActivities, saveItinerary } = useTrip()
   const { navigate } = useRouter()
   const [view, setView] = useState<'calendar' | 'timeline'>('calendar')
   const [openDays, setOpenDays] = useState<Set<string>>(new Set([MOCK_DAYS[0].id]))
   const [items, setItems] = useState<Activity[]>(INITIAL_ACTIVITIES)
+  const [persisted, setPersisted] = useState<SelectedActivity[]>([])
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
   // When arriving from budget step, seed activities into calendar (simple spread by day)
+  // Pull latest activities from backend to seed calendar
   useEffect(() => {
-    if (!selectedActivities.length) return
+    (async () => {
+      try {
+        const tripId = await getLatestTrip()
+        if (!tripId) return
+        const res = await getTripActivities(tripId)
+        const list: any[] = res?.data || []
+        const mapped: SelectedActivity[] = list.map((a: any, idx: number) => ({
+          id: a.id,
+          name: a.name,
+          city: a.city || a.cityName || '',
+          category: a.category,
+          img: a.img || '',
+          duration: a.duration,
+          rating: a.rating,
+          cost: a.cost,
+          order: idx,
+        }))
+        setPersisted(mapped)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    const source = persisted.length ? persisted : selectedActivities
+    if (!source.length) return
     const seeded: Activity[] = []
     let dayIdx = 0
     let timeHour = 9
-    for (const act of selectedActivities.sort((a, b) => a.order - b.order)) {
+    for (const act of source.sort((a, b) => a.order - b.order)) {
       const day = MOCK_DAYS[dayIdx % MOCK_DAYS.length]
       const hh = String(timeHour).padStart(2, '0')
       seeded.push({ id: act.id, dayId: day.id, time: `${hh}:00`, name: act.name })
@@ -46,7 +76,7 @@ export default function TripCalendar() {
       }
     }
     setItems(seeded)
-  }, [selectedActivities])
+  }, [persisted, selectedActivities])
 
   const byDay = useMemo(() => {
     const map: Record<string, Activity[]> = {}
@@ -83,6 +113,32 @@ export default function TripCalendar() {
     setItems(prev => prev.map(a => (a.id === activityId ? { ...a, time } : a)))
   }
 
+  async function saveCalendar() {
+    try {
+      setSaving(true)
+      setSaveMsg(null)
+      const tripId = await getLatestTrip()
+      if (!tripId) {
+        setSaveMsg('No trip found to save calendar')
+        return
+      }
+      // Convert items into itinerary days
+      const daysMap: Record<string, { id: string; date: string; items: { id: string; activityId?: string; time: string; name: string }[] }> = {}
+      for (const d of MOCK_DAYS) daysMap[d.id] = { id: d.id, date: d.date, items: [] }
+      for (const it of items) {
+        daysMap[it.dayId].items.push({ id: it.id, activityId: it.id, time: it.time, name: it.name })
+      }
+      const itinerary = Object.values(daysMap)
+      await saveItinerary(tripId, itinerary)
+      setSaveMsg('Calendar saved successfully')
+    } catch (e: any) {
+      setSaveMsg(e?.message || 'Failed to save calendar')
+    } finally {
+      setSaving(false)
+      setTimeout(() => setSaveMsg(null), 3000)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
       <div className="sticky top-0 z-20 border-b border-neutral-200 bg-white/80 backdrop-blur">
@@ -95,12 +151,14 @@ export default function TripCalendar() {
             <div className="flex items-center gap-2">
               <button onClick={() => addActivity(MOCK_DAYS[0].id)} className="inline-flex items-center gap-2 rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50"><Plus className="h-4 w-4" /> Add Activity</button>
               <button onClick={autoSchedule} className="inline-flex items-center gap-2 rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50"><Wand2 className="h-4 w-4" /> Auto-Schedule</button>
+              <button onClick={saveCalendar} disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-1.5 text-sm text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save Calendar'}</button>
             </div>
           </div>
         </div>
       </div>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {saveMsg && <div className="mb-3 text-xs text-emerald-700">{saveMsg}</div>}
         {view === 'calendar' ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {MOCK_DAYS.map(d => (

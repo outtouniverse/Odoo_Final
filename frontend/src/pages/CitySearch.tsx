@@ -119,9 +119,118 @@ function getFlagEmoji(countryCode: string) {
     )
 }
 
+// Function to get relevant images for cities (same as Dashboard)
+function getCityImage(cityName: string, country: string, existingImage?: string): string {
+  // If we have an existing image, use it
+  if (existingImage && existingImage.trim()) {
+    return existingImage;
+  }
+
+  // Fallback to relevant stock images based on city/country
+  const cityLower = cityName.toLowerCase();
+  const countryLower = country.toLowerCase();
+  
+  // Popular cities with specific images
+  if (cityLower.includes('paris') || countryLower.includes('france')) {
+    return 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('tokyo') || countryLower.includes('japan')) {
+    return 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('new york') || cityLower.includes('nyc') || countryLower.includes('usa')) {
+    return 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('london') || countryLower.includes('uk') || countryLower.includes('england')) {
+    return 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('rome') || cityLower.includes('milan') || countryLower.includes('italy')) {
+    return 'https://images.unsplash.com/photo-1552832230-cb7a4b0b8046?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('barcelona') || cityLower.includes('madrid') || countryLower.includes('spain')) {
+    return 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('amsterdam') || countryLower.includes('netherlands')) {
+    return 'https://images.unsplash.com/photo-1512470876302-972faa2aa9ee?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('berlin') || countryLower.includes('germany')) {
+    return 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('prague') || countryLower.includes('czech')) {
+    return 'https://images.unsplash.com/photo-1518433957232-3107f5fd5995?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('vienna') || countryLower.includes('austria')) {
+    return 'https://images.unsplash.com/photo-1516550893923-e4c698aa90d7?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('budapest') || countryLower.includes('hungary')) {
+    return 'https://images.unsplash.com/photo-1551867633-194f12569620?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('dubai') || countryLower.includes('uae')) {
+    return 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('singapore')) {
+    return 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('bangkok') || countryLower.includes('thailand')) {
+    return 'https://images.unsplash.com/photo-1508009603885-50cf7c079365?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('sydney') || countryLower.includes('australia')) {
+    return 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('toronto') || cityLower.includes('vancouver') || countryLower.includes('canada')) {
+    return 'https://images.unsplash.com/photo-1517935706615-2717063c2225?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('rio') || cityLower.includes('sao paulo') || countryLower.includes('brazil')) {
+    return 'https://images.unsplash.com/photo-1483729558449-99ef09a6c49d?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('mexico') || countryLower.includes('mexico')) {
+    return 'https://images.unsplash.com/photo-1522083165195-3424ed129620?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('cairo') || countryLower.includes('egypt')) {
+    return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('marrakech') || countryLower.includes('morocco')) {
+    return 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('istanbul') || countryLower.includes('turkey')) {
+    return 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('moscow') || countryLower.includes('russia')) {
+    return 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('beijing') || cityLower.includes('shanghai') || countryLower.includes('china')) {
+    return 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('seoul') || countryLower.includes('korea')) {
+    return 'https://images.unsplash.com/photo-1538485399081-7c8cebdbea20?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('mumbai') || cityLower.includes('delhi') || countryLower.includes('india')) {
+    return 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&h=300&fit=crop';
+  }
+  
+  // Generic fallbacks based on region
+  if (countryLower.includes('europe')) {
+    return 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('asia')) {
+    return 'https://images.unsplash.com/photo-1548013146-724ded68c90d?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('africa')) {
+    return 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('america') || countryLower.includes('caribbean')) {
+    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('oceania') || countryLower.includes('pacific')) {
+    return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop';
+  }
+  
+  // Default beautiful travel image
+  return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+}
+
 export default function CitySearch() {
   const { navigate } = useRouter()
-  const { addCity, removeCity, selectedCities, saveTripToDatabase, saveCityToDatabase, createQuickTrip } = useTrip()
+  const { addCity, removeCity, selectedCities, saveTripToDatabase, createOrGetCurrentTrip, saveCityToDatabase } = useTrip()
   const { isAuthenticated } = useAuth()
   const { success: showSuccess, error: showError } = useToast()
   const [query, setQuery] = useState('')
@@ -135,6 +244,7 @@ export default function CitySearch() {
   const [extraCities, setExtraCities] = useState<City[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [countries, setCountries] = useState<string[]>(['All'])
   
   // Trip save modal state
@@ -150,6 +260,14 @@ export default function CitySearch() {
 
   const pageSize = 12
 
+  // Clear success message after 3 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [success])
+
   // Clear error message after 5 seconds
   useEffect(() => {
     if (error) {
@@ -157,6 +275,12 @@ export default function CitySearch() {
       return () => clearTimeout(timer)
     }
   }, [error])
+
+  // Sync addedIds with selectedCities
+  useEffect(() => {
+    const selectedIds = new Set(selectedCities.map(city => city.id))
+    setAddedIds(selectedIds)
+  }, [selectedCities])
 
   // Debounce search query
   useEffect(() => {
@@ -369,35 +493,45 @@ export default function CitySearch() {
         removeCity(id)
         showSuccess('City removed from trip! 🗑️')
       } else {
-        // Add to trip
-        next.add(id)
+        // Check if city is already in selectedCities
         const c = [...cities, ...extraCities].find(x => x.id === id)
         if (c) {
+          const isAlreadySelected = selectedCities.some(city => city.id === id)
+          if (isAlreadySelected) {
+            showError('This city is already in your trip!')
+            return next
+          }
+
           try {
-            // Save to database immediately
+            // Add to local state first
+            addCity({ 
+              id: c.id, 
+              name: c.name, 
+              country: c.country, 
+              img: c.img 
+            })
+            
+            // Save to database using the simplified approach
             saveCityToDatabase({ 
               id: c.id, 
               name: c.name, 
               country: c.country, 
               img: c.img 
             }).then(() => {
-              showSuccess(`Added ${c.name}, ${c.country} to your trip! ✈️`)
-            }).catch((err) => {
-              console.error('Error saving city to database:', err)
-              showError('Failed to save city to database. Please try again.')
-              // Remove from addedIds if save failed
-              next.delete(id)
+              console.log('City saved to database:', c.name)
+            }).catch((err: any) => {
+              console.log('Could not save city to database:', err.message)
             })
+            
+            next.add(id)
+            showSuccess(`Added ${c.name}, ${c.country} to your trip! ✈️`)
           } catch (err) {
             console.error('Error adding city to trip:', err)
             showError('Failed to add city to trip. Please try again.')
-            // Remove from addedIds if addCity failed
-            next.delete(id)
           }
         } else {
           console.error('City not found:', id)
           showError('City not found. Please try again.')
-          next.delete(id)
         }
       }
       return next
@@ -463,13 +597,13 @@ export default function CitySearch() {
     setError(null)
 
     try {
-      await createQuickTrip(selectedCities)
+      await createOrGetCurrentTrip()
       setAddedIds(new Set())
       showSuccess(`Quick trip created with ${selectedCities.length} cities! 🚀`)
-      // Navigate to trips page to show the new trip
       setTimeout(() => navigate('/trips'), 1500)
     } catch (err: any) {
-      showError(err?.message || 'Failed to create quick trip')
+      console.error('Error creating quick trip:', err)
+      showError(err.message || 'Failed to create quick trip. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -568,7 +702,9 @@ export default function CitySearch() {
         {error && (
           <div className="text-center text-red-500 py-10">{error}</div>
         )}
-        {/* Removed success message as it's now handled by useToast */}
+        {success && (
+          <div className="text-center text-green-500 py-10">{success}</div>
+        )}
         {!loading && !error && (
           <>
             {/* Grid */}
@@ -576,7 +712,7 @@ export default function CitySearch() {
               {pageItems.map((c) => (
                 <article key={c.id} className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
                   <div className="relative h-36 w-full overflow-hidden">
-                    <img src={c.img} alt={c.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <img src={getCityImage(c.name, c.country, c.img)} alt={c.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                     <div className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs shadow">
                       <span className="mr-1">{c.flag}</span>
                       {c.country}
@@ -593,7 +729,7 @@ export default function CitySearch() {
                       <span className="text-neutral-500">{c.continent}</span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      {addedIds.has(c.id) ? (
+                      {addedIds.has(c.id) || selectedCities.some(city => city.id === c.id) ? (
                         <button aria-label="Added" onClick={() => toggleAdd(c.id)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-700">
                           <Check className="h-4 w-4" /> Added
                         </button>

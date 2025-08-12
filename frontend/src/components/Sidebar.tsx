@@ -1,11 +1,12 @@
 import { useRouter } from '../utils/router'
+import { useAuth } from '../utils/auth'
 
 type SidebarProps = {
   open?: boolean
   onClose?: () => void
 }
 
-const navItems = [
+const baseNavItems = [
   { key: 'dashboard', label: 'Dashboard', to: '/dashboard', icon: (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"><path strokeWidth="1.5" d="M3 12h8V3H3v9Zm10 9h8v-7h-8v7Zm0-9h8V3h-8v9Zm-10 9h8v-7H3v7Z"/></svg>
   ) },
@@ -25,6 +26,13 @@ const navItems = [
 
 export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const { path, navigate } = useRouter()
+  const { isAuthenticated, hasRole } = useAuth()
+  const navItems = [...baseNavItems]
+  if (isAuthenticated && hasRole('super_admin')) {
+    navItems.push({ key: 'admin', label: 'Admin', to: '/admin', icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"><path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M12 3l2.09 6.26H21l-5.17 3.76L17.91 21 12 16.97 6.09 21l2.08-7.98L3 9.26h6.91L12 3z"/></svg>
+    ) })
+  }
   return (
     <>
       {/* Overlay for mobile */}

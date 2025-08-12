@@ -4,11 +4,135 @@ import Sidebar from '../components/Sidebar'
 import { apiFetch } from '../utils/api'
 import { Link, useRouter } from '../utils/router'
 
+// Function to get relevant images for cities (same as Dashboard)
+function getCityImage(cityName: string, country: string, existingImage?: string): string {
+  // If we have an existing image, use it
+  if (existingImage && existingImage.trim()) {
+    return existingImage;
+  }
+
+  // Fallback to relevant stock images based on city/country
+  const cityLower = cityName.toLowerCase();
+  const countryLower = country.toLowerCase();
+  
+  // Popular cities with specific images
+  if (cityLower.includes('paris') || countryLower.includes('france')) {
+    return 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('tokyo') || countryLower.includes('japan')) {
+    return 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('new york') || cityLower.includes('nyc') || countryLower.includes('usa')) {
+    return 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('london') || countryLower.includes('uk') || countryLower.includes('england')) {
+    return 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('rome') || cityLower.includes('milan') || countryLower.includes('italy')) {
+    return 'https://images.unsplash.com/photo-1552832230-cb7a4b0b8046?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('barcelona') || cityLower.includes('madrid') || countryLower.includes('spain')) {
+    return 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('amsterdam') || countryLower.includes('netherlands')) {
+    return 'https://images.unsplash.com/photo-1512470876302-972faa2aa9ee?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('berlin') || countryLower.includes('germany')) {
+    return 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('prague') || countryLower.includes('czech')) {
+    return 'https://images.unsplash.com/photo-1518433957232-3107f5fd5995?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('vienna') || countryLower.includes('austria')) {
+    return 'https://images.unsplash.com/photo-1516550893923-e4c698aa90d7?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('budapest') || countryLower.includes('hungary')) {
+    return 'https://images.unsplash.com/photo-1551867633-194f125696db?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('dubai') || countryLower.includes('uae')) {
+    return 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('singapore')) {
+    return 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('bangkok') || countryLower.includes('thailand')) {
+    return 'https://images.unsplash.com/photo-1508009603885-50cf7c079365?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('sydney') || countryLower.includes('australia')) {
+    return 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('toronto') || cityLower.includes('vancouver') || countryLower.includes('canada')) {
+    return 'https://images.unsplash.com/photo-1517935706615-2717063c2225?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('rio') || cityLower.includes('sao paulo') || countryLower.includes('brazil')) {
+    return 'https://images.unsplash.com/photo-1483729558449-99ef09a6c49d?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('mexico') || countryLower.includes('mexico')) {
+    return 'https://images.unsplash.com/photo-1522083165195-3424ed129620?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('cairo') || countryLower.includes('egypt')) {
+    return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('marrakech') || countryLower.includes('morocco')) {
+    return 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('istanbul') || countryLower.includes('turkey')) {
+    return 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('moscow') || countryLower.includes('russia')) {
+    return 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('beijing') || cityLower.includes('shanghai') || countryLower.includes('china')) {
+    return 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('seoul') || countryLower.includes('korea')) {
+    return 'https://images.unsplash.com/photo-1538485399081-7c8cebdbea20?w=400&h=300&fit=crop';
+  }
+  if (cityLower.includes('mumbai') || cityLower.includes('delhi') || countryLower.includes('india')) {
+    return 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&h=300&fit=crop';
+  }
+  
+  // Generic fallbacks based on region
+  if (countryLower.includes('europe')) {
+    return 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('asia')) {
+    return 'https://images.unsplash.com/photo-1548013146-724ded68c90d?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('africa')) {
+    return 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('america') || countryLower.includes('caribbean')) {
+    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+  }
+  if (countryLower.includes('oceania') || countryLower.includes('pacific')) {
+    return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop';
+  }
+  
+  // Default beautiful travel image
+  return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+}
+
 type SelectedCity = {
   id: string
   name: string
   country: string
   img?: string
+  addedAt: string
+  activities?: Activity[]
+}
+
+type Activity = {
+  id: string
+  name: string
+  city: string
+  category: string
+  cost: string
+  duration: string
+  rating: number
+  img: string
+  description: string
+  tags: string[]
   addedAt: string
 }
 
@@ -89,14 +213,28 @@ export default function Trips() {
               {trips.map((t) => (
                 <article key={t._id} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
                   <div className="h-36 w-full bg-neutral-100">
-                    {t.coverPhoto ? (
-                      <img src={t.coverPhoto} alt="Cover" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-neutral-400">No photo</div>
-                    )}
+                    {(() => { 
+                      // Get relevant cover image for the trip
+                      let cover = t.coverPhoto;
+                      
+                      // If no cover photo, try to get image from first city
+                      if (!cover && t.selectedCities && t.selectedCities.length > 0) {
+                        const firstCity = t.selectedCities[0];
+                        cover = getCityImage(firstCity.name, firstCity.country, firstCity.img);
+                      }
+                      
+                      // If still no image, use a generic travel image
+                      if (!cover) {
+                        cover = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop';
+                      }
+                      
+                      return (
+                        <img src={cover} alt="Cover" className="h-full w-full object-cover" />
+                      );
+                    })()}
                   </div>
                   <div className="p-4">
-                    <h3 className="truncate text-sm font-semibold text-neutral-900">{t.name}</h3>
+                    <h3 className="text-sm font-semibold">{t.name}</h3>
                     <p className="mt-1 text-xs text-neutral-600">
                       {t.location?.city || ''}{t.location?.city && t.location?.country ? ', ' : ''}{t.location?.country || ''}
                     </p>
@@ -106,30 +244,10 @@ export default function Trips() {
                       {t.endDate ? new Date(t.endDate).toLocaleDateString() : ''}
                       {t.status ? ` · ${t.status}` : ''}
                     </p>
-                    
-                    {/* Display selected cities */}
                     {t.selectedCities && t.selectedCities.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs font-medium text-neutral-700 mb-2">
-                          Selected Cities ({t.selectedCities.length}):
-                        </p>
-                        <div className="space-y-1">
-                          {t.selectedCities.slice(0, 3).map((city) => (
-                            <div key={city.id} className="flex items-center gap-2 text-xs text-neutral-600">
-                              <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                              <span>{city.name}, {city.country}</span>
-                            </div>
-                          ))}
-                          {t.selectedCities.length > 3 && (
-                            <div className="text-xs text-neutral-500">
-                              +{t.selectedCities.length - 3} more cities
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <p className="mt-2 text-xs text-neutral-700">Destinations: <span className="font-medium">{t.selectedCities.length}</span></p>
                     )}
-
-                    {/* Display budget if available */}
+                    {/* Removed activities summary for cleaner trips view */}
                     {t.budget && (
                       <div className="mt-2 text-xs text-neutral-600">
                         Budget: {t.budget.currency} {t.budget.amount.toLocaleString()}
